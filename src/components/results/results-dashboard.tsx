@@ -132,6 +132,7 @@ export function ResultsDashboard({ projectId, sheetsUrl }: ResultsDashboardProps
             title="Cross-Source Analysis"
             content={crossSource.analysis_content}
             defaultOpen
+            variant="cards"
           />
         ) : (
           <p className="py-8 text-center text-muted-foreground">
