@@ -74,24 +74,43 @@ export async function POST(request: NextRequest) {
       let fullResponse = '';
 
       try {
-        const response = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages: messages_for_claude,
-          stream: true,
-        });
+        // Stream with model fallback — streaming create() doesn't throw on 529,
+        // errors surface during iteration, so we catch and retry with fallback model
+        const models = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
 
-        for await (const event of response) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            const text = event.delta.text;
-            fullResponse += text;
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
-            );
+        for (let i = 0; i < models.length; i++) {
+          const model = models[i];
+          try {
+            const response = await anthropic.messages.create({
+              model,
+              max_tokens: 4096,
+              system: systemPrompt,
+              messages: messages_for_claude,
+              stream: true,
+            });
+
+            for await (const event of response) {
+              if (
+                event.type === 'content_block_delta' &&
+                event.delta.type === 'text_delta'
+              ) {
+                const text = event.delta.text;
+                fullResponse += text;
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
+                );
+              }
+            }
+            break; // Success — exit model loop
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            const isOverloaded = msg.includes('overloaded') || msg.includes('529') || msg.includes('rate');
+            if (isOverloaded && i < models.length - 1) {
+              console.log(`[chat] ${model} overloaded, falling back to ${models[i + 1]}`);
+              fullResponse = ''; // Reset in case partial data came through
+              continue;
+            }
+            throw err;
           }
         }
 

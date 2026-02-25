@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 
 interface ExecutionPlanCardProps {
   plan: ExecutionPlan;
-  onApprove: () => void;
+  onApprove: () => Promise<void> | void;
   onRevise: () => void;
 }
 
@@ -36,8 +36,8 @@ export function ExecutionPlanCard({ plan, onApprove, onRevise }: ExecutionPlanCa
 
       if (!res.ok) throw new Error('Failed to approve plan');
 
-      onApprove();
       toast.success('Plan approved! Starting execution...');
+      await onApprove();
     } catch {
       toast.error('Failed to approve plan');
     } finally {

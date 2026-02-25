@@ -23,6 +23,8 @@ export default function ProjectPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [plan, setPlan] = useState<ExecutionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const isSynthesizing = useRef(false);
 
   const loadProject = useCallback(async () => {
     try {
@@ -139,16 +141,36 @@ export default function ProjectPage() {
   };
 
   const handleExecutionComplete = async () => {
+    if (isSynthesizing.current) return;
+    isSynthesizing.current = true;
     try {
       const res = await fetch('/api/synthesize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId }),
       });
-      if (!res.ok) throw new Error('Synthesis failed');
+      if (!res.ok) throw new Error('Synthesis failed to start');
+      // POST returns immediately — polling + realtime handles the rest
+    } catch {
+      toast.error('Synthesis failed to start');
+      isSynthesizing.current = false;
+    }
+  };
+
+  const handleRetrySynthesis = async () => {
+    setIsRetrying(true);
+    isSynthesizing.current = false;
+    try {
+      const res = await fetch('/api/synthesize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      });
+      if (!res.ok) throw new Error('Synthesis failed to start');
       await loadProject();
     } catch {
-      toast.error('Synthesis failed');
+      toast.error('Synthesis failed to start');
+      setIsRetrying(false);
     }
   };
 
@@ -239,13 +261,25 @@ export default function ProjectPage() {
         <div className="rounded-lg border border-destructive/50 bg-destructive/5 p-8 text-center space-y-4">
           <p className="font-medium text-destructive">Something went wrong.</p>
           <p className="text-sm text-muted-foreground">
-            You can retry failed jobs or start a new research project.
+            You can retry or start a new research project.
           </p>
-          {plan && (
-            <Button variant="outline" onClick={() => handleRetryFailed(plan.id)}>
-              Retry Failed Jobs
+          <div className="flex justify-center gap-2">
+            <Button onClick={handleRetrySynthesis} disabled={isRetrying}>
+              {isRetrying ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                'Retry Synthesis'
+              )}
             </Button>
-          )}
+            {plan && (
+              <Button variant="outline" onClick={() => handleRetryFailed(plan.id)}>
+                Retry Failed Jobs
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>

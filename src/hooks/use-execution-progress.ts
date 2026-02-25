@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import type { ScrapeJob } from '@/lib/types';
 
 export function useExecutionProgress(projectId: string) {
@@ -9,48 +8,31 @@ export function useExecutionProgress(projectId: string) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
+    let active = true;
+
+    const fetchJobs = async () => {
+      try {
+        const res = await fetch(`/api/status/${projectId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active && data.jobs) {
+          setJobs(data.jobs);
+          setIsLoaded(true);
+        }
+      } catch {
+        // Ignore fetch errors
+      }
+    };
 
     // Initial fetch
-    supabase
-      .from('scrape_jobs')
-      .select('*')
-      .eq('project_id', projectId)
-      .order('created_at')
-      .then(({ data }) => {
-        if (data) setJobs(data);
-        setIsLoaded(true);
-      });
+    fetchJobs();
 
-    // Realtime subscription
-    const channel = supabase
-      .channel(`jobs-${projectId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scrape_jobs',
-          filter: `project_id=eq.${projectId}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setJobs((prev) => [...prev, payload.new as ScrapeJob]);
-          } else if (payload.eventType === 'UPDATE') {
-            setJobs((prev) =>
-              prev.map((j) =>
-                j.id === (payload.new as ScrapeJob).id
-                  ? (payload.new as ScrapeJob)
-                  : j
-              )
-            );
-          }
-        }
-      )
-      .subscribe();
+    // Poll every 3s
+    const interval = setInterval(fetchJobs, 3000);
 
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      clearInterval(interval);
     };
   }, [projectId]);
 
