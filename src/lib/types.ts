@@ -131,4 +131,5 @@ export interface ProjectStatusResponse {
   completedCount: number;
   totalCount: number;
   failedCount: number;
+  analysis_results: { id: string; pass_type: string; source_platform: string | null; created_at: string }[];
 }
