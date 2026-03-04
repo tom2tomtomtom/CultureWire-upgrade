@@ -1,5 +1,6 @@
 import { ACTOR_REGISTRY } from './actor-registry';
 import type { AnalysisResult, Platform, ScrapeResult } from './types';
+import type { TopItemDisplay } from './scoring';
 
 function escapeHtml(str: string): string {
   return str
@@ -116,6 +117,7 @@ function splitSections(md: string): { title: string; body: string }[] {
 function sectionIcon(title: string): string {
   const lower = title.toLowerCase();
   if (lower.includes('executive') || lower.includes('summary') || lower.includes('headline')) return '📋';
+  if (lower.includes('route')) return '🎨';
   if (lower.includes('strike')) return '🎯';
   if (lower.includes('opportunit')) return '💡';
   if (lower.includes('battleground') || lower.includes('tension')) return '⚡';
@@ -134,6 +136,89 @@ function sectionIcon(title: string): string {
   if (lower.includes('answer')) return '💬';
   if (lower.includes('top-line') || lower.includes('verdict')) return '⚡';
   return '📌';
+}
+
+function buildTopPostsHtml(items: TopItemDisplay[], platform: string): string {
+  if (!items || items.length === 0) return '';
+
+  const tierClass = (t: string) => {
+    if (t === 'STRIKE ZONE') return 'strike';
+    if (t === 'OPPORTUNITY') return 'opportunity';
+    if (t === 'MONITOR') return 'monitor';
+    return '';
+  };
+
+  const platformIcon: Record<string, string> = {
+    reddit: '💬', youtube: '▶️', tiktok: '🎵', instagram: '📸', trustpilot: '⭐',
+  };
+
+  const cards = items.map((item) => {
+    const thumbHtml = item._thumbnail
+      ? `<div class="post-thumb"><img src="${escapeHtml(item._thumbnail)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=no-img>${platformIcon[platform] || '📄'}</div>'"></div>`
+      : `<div class="post-thumb"><div class="no-img">${platformIcon[platform] || '📄'}</div></div>`;
+
+    const titleHtml = item._url
+      ? `<a href="${escapeHtml(item._url)}" target="_blank" rel="noopener">${escapeHtml(item._title || 'View Post')}</a>`
+      : escapeHtml(item._title || '—');
+
+    return `
+    <div class="post-card">
+      ${thumbHtml}
+      <div class="post-body">
+        <div class="post-head">
+          <span class="post-score-badge ${tierClass(item._tier)}">${item._score}</span>
+          <span class="tier-badge ${tierClass(item._tier)}">${item._tier}</span>
+        </div>
+        <div class="post-title">${titleHtml}</div>
+        <div class="post-meta">
+          ${item._creator ? `<span class="post-creator">${escapeHtml(item._creator)}</span>` : ''}
+          ${item._platform_metric ? `<span>${escapeHtml(item._platform_metric)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="card" style="margin-top:20px;">
+    <div class="card-header">
+      <span class="icon">🏆</span>
+      <h2>Top Scored Content</h2>
+    </div>
+    <p style="margin-bottom:16px;font-size:12px;color:var(--text-muted);">Ranked by engagement score. Click to view original content.</p>
+    <div class="post-grid">${cards}</div>
+  </div>`;
+}
+
+function buildRouteCardHtml(section: { title: string; body: string }): string {
+  // Extract score from title pattern: "Route N: Name — X.Y/10" or "Route N: Name — X/10"
+  const scoreMatch = section.title.match(/—\s*(\d+(?:\.\d+)?)\/10/);
+  const score = scoreMatch ? parseFloat(scoreMatch[1]) : null;
+  const routeName = section.title.replace(/—\s*\d+(?:\.\d+)?\/10/, '').trim();
+
+  if (score !== null) {
+    const scoreClass = score >= 8 ? 'high' : score >= 6 ? 'mid' : '';
+    return `
+    <div class="route-card">
+      <div class="route-score-big ${scoreClass}">
+        <div class="num">${score}</div>
+        <div class="den">/10</div>
+      </div>
+      <div class="route-content">
+        <h3>${escapeHtml(routeName)}</h3>
+        <div class="prose">${markdownToHtml(section.body)}</div>
+      </div>
+    </div>`;
+  }
+
+  // Fallback: render as a regular card
+  return `
+  <div class="card">
+    <div class="card-header">
+      <span class="icon">🎨</span>
+      <h2>${escapeHtml(section.title)}</h2>
+    </div>
+    <div class="prose">${markdownToHtml(section.body)}</div>
+  </div>`;
 }
 
 function sectionTier(title: string): string {
@@ -367,6 +452,35 @@ h1,h2,h3,h4 { line-height:1.3; }
 .prose strong { color:var(--text-primary); font-weight:600; }
 .prose em { font-style:italic; }
 
+/* Post Cards Grid */
+.post-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:20px 0; }
+.post-card { background:var(--bg-card); border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.05); transition:transform 0.2s,box-shadow 0.2s; display:flex; flex-direction:column; }
+.post-card:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+.post-thumb { aspect-ratio:16/9; overflow:hidden; background:#f0ede8; display:flex; align-items:center; justify-content:center; }
+.post-thumb img { width:100%; height:100%; object-fit:cover; }
+.post-thumb .no-img { font-size:28px; color:var(--text-muted); }
+.post-body { padding:14px; flex:1; display:flex; flex-direction:column; }
+.post-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.post-score-badge { font-size:11px; font-weight:700; background:var(--accent-indigo); color:#fff; padding:2px 8px; border-radius:4px; }
+.post-score-badge.strike { background:#DC2626; }
+.post-score-badge.opportunity { background:#D97706; }
+.post-score-badge.monitor { background:#2563EB; }
+.post-title { font-size:13px; font-weight:600; line-height:1.4; margin-bottom:8px; flex:1; }
+.post-title a { color:var(--text-primary); text-decoration:none; }
+.post-title a:hover { color:var(--accent-blue); text-decoration:underline; }
+.post-meta { font-size:11px; color:var(--text-muted); display:flex; gap:12px; flex-wrap:wrap; margin-top:auto; }
+.post-creator { font-weight:500; }
+
+/* Route Cards */
+.route-card { display:flex; gap:24px; background:var(--bg-card); border-radius:12px; padding:28px; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-left:4px solid var(--accent-indigo); }
+.route-score-big { min-width:80px; text-align:center; }
+.route-score-big .num { font-size:48px; font-weight:800; color:var(--accent-indigo); line-height:1; }
+.route-score-big .den { font-size:18px; color:var(--text-muted); font-weight:600; }
+.route-score-big.high .num { color:#DC2626; }
+.route-score-big.mid .num { color:#D97706; }
+.route-content { flex:1; min-width:0; }
+.route-content h3 { font-size:18px; font-weight:700; margin-bottom:12px; }
+
 /* Footer */
 footer { background:#1a1a2e; color:rgba(255,255,255,0.4); padding:28px; text-align:center; font-size:12px; margin-top:48px; letter-spacing:0.3px; }
 
@@ -404,6 +518,7 @@ export function buildHtmlDashboard(
 ): string {
   const narrative = analyses.find((a) => a.pass_type === 'strategic_narrative');
   const crossSource = analyses.find((a) => a.pass_type === 'cross_source');
+  const creativeRoutes = analyses.find((a) => a.pass_type === 'creative_routes');
   const perSource = analyses.filter((a) => a.pass_type === 'per_source');
 
   const platforms = [...new Set(results.map((r) => r.source_platform))];
@@ -482,6 +597,7 @@ export function buildHtmlDashboard(
       return `<button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-${p}" onclick="showTab('${p}',this)">${escapeHtml(displayName)}</button>`;
     }).join('\n    ')}
     ${crossSource ? `<button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-cross-source" onclick="showTab('cross-source',this)">Cross-Source</button>` : ''}
+    ${creativeRoutes ? `<button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-creative-routes" onclick="showTab('creative-routes',this)">Creative Routes</button>` : ''}
     <button class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-data" onclick="showTab('data',this)">Data Overview</button>
   </div>
 </div>
@@ -546,6 +662,8 @@ ${perSource.map((analysis) => {
     <div class="prose">${markdownToHtml(section.body)}</div>
   </div>`;
   }).join('')}
+
+  ${buildTopPostsHtml((analysis.metadata?.top_items || []) as TopItemDisplay[], platform)}
 </div>`;
 }).join('')}
 
@@ -577,6 +695,35 @@ ${crossSource ? `
     <div class="prose">${markdownToHtml(section.body)}</div>
   </div>`;
   }).join('')}`;
+  })()}
+</div>` : ''}
+
+<!-- ═══ Creative Routes Tab ═══ -->
+${creativeRoutes ? `
+<div id="panel-creative-routes" class="panel container" role="tabpanel" style="padding-bottom:48px;">
+  <div class="big-insight" style="margin-top:0;">
+    <div class="pre">Creative Routes</div>
+    <h3 style="color:#fff;">Strategic directions anchored in cultural truths from the data</h3>
+    <p>Each route is scored 0-10 based on cultural relevance, brand fit, and creative potential.</p>
+  </div>
+
+  ${(() => {
+    const sections = splitSections(creativeRoutes.analysis_content);
+    return sections.map((section) => {
+      if (section.title.toLowerCase().includes('route')) {
+        return buildRouteCardHtml(section);
+      }
+      const icon = sectionIcon(section.title);
+      const tier = sectionTier(section.title);
+      return `
+  <div class="card ${tier}">
+    <div class="card-header">
+      <span class="icon">${icon}</span>
+      <h2>${escapeHtml(section.title)}</h2>
+    </div>
+    <div class="prose">${markdownToHtml(section.body)}</div>
+  </div>`;
+    }).join('');
   })()}
 </div>` : ''}
 

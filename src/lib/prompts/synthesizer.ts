@@ -473,3 +473,68 @@ Each starts with an action verb. Each ties back to a specific finding with platf
 
 Write for a senior decision-maker who wants to act, not just understand. Be direct, evidence-based, specific, and opinionated. No filler. No hedging. Every paragraph must contain at least one specific data point. Take positions — say what the brand SHOULD do, not just what it COULD do.`;
 }
+
+export function buildCreativeRoutesPrompt(spec: ResearchSpec, brandContext: string): string {
+  return `You are a senior creative strategist at a top creative agency. Based on the research findings, generate 3-5 scored creative routes — strategic directions for content, campaigns, or brand activation.
+
+Research Objective: ${spec.objective}
+Key Questions:
+${spec.key_questions.map((q) => `- ${q}`).join('\n')}
+Target Audience: ${spec.target_audience || 'General'}
+Competitors: ${spec.competitors.join(', ') || 'Not specified'}
+${brandContext ? `\nBrand Context: ${brandContext}` : ''}
+
+${STYLE_GUIDE}
+
+${BRAND_ALIGNMENT}
+
+You will receive the strategic narrative and cross-source synthesis. Extract the highest-value insights and tensions, then develop creative routes.
+
+A CREATIVE ROUTE is a strategic direction anchored in a cultural truth from the data. Each route must be distinct — different angles, not variations of the same idea.
+
+For EACH route, use this structure:
+
+## Route [N]: [Catchy Route Name] — [Score]/10
+
+**Cultural Truth:** The real human insight this route is built on (one sentence, grounded in data)
+
+**The Tension:** Which cultural battleground this engages with and why it matters
+
+**The Angle:** How the brand enters this space authentically (2-3 sentences). Be specific — what's the creative proposition?
+
+**Example Execution:** A concrete campaign/content concept:
+- **Title:** Campaign or content name
+- **Format:** The specific deliverable (e.g., TikTok series, Reddit AMA, YouTube doc)
+- **Hook:** The opening line, visual, or moment that grabs attention
+- **Platform:** Where this lives and why
+
+**Platform Play:**
+
+| Platform | Role | Format |
+|----------|------|--------|
+(Where to activate and how — be specific about formats)
+
+**Right to Play:** GREEN/YELLOW/RED with one-line reasoning
+
+**Risk Assessment:**
+- **Upside:** What success looks like (with target metrics)
+- **Downside:** What could go wrong
+- **Mitigation:** How to de-risk
+
+---
+
+SCORING CRITERIA (0-10):
+- 9-10: Breakthrough — culturally sharp, competitively differentiated, immediate impact potential
+- 7-8: Strong — solid cultural foundation, good brand fit, actionable
+- 5-6: Moderate — safe but undifferentiated, needs more edge
+- 3-4: Weak — generic, lacks cultural grounding, could be any brand
+
+RULES:
+- Every route must trace back to specific findings from the research data — cite them
+- At least one route should be "safe" (7-8) and at least one should be "bold" (8-10)
+- Name specific platforms and formats — no generic "social media campaign"
+- Be opinionated. If a route is risky, say so. If it's obvious, acknowledge it.
+- Include at least one route that addresses the biggest cultural battleground
+- Order routes from highest to lowest score
+- Include > blockquotes from real user content that inspired each route`;
+}

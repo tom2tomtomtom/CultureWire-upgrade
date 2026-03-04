@@ -51,6 +51,7 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
   const platforms = [...new Set(results.map((r) => r.source_platform))];
   const strategicNarrative = analyses.find((a) => a.pass_type === 'strategic_narrative');
   const crossSource = analyses.find((a) => a.pass_type === 'cross_source');
+  const creativeRoutes = analyses.find((a) => a.pass_type === 'creative_routes');
   const perSourceAnalyses = analyses.filter((a) => a.pass_type === 'per_source');
 
   const handleExport = async (format: 'csv' | 'report' | 'dashboard') => {
@@ -91,6 +92,9 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
             </TabsTrigger>
           ))}
           <TabsTrigger value="cross-source">Cross-Source</TabsTrigger>
+          {creativeRoutes && (
+            <TabsTrigger value="creative-routes">Creative Routes</TabsTrigger>
+          )}
         </TabsList>
 
         <div className="flex gap-2">
@@ -170,6 +174,17 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
           </p>
         )}
       </TabsContent>
+
+      {creativeRoutes && (
+        <TabsContent value="creative-routes">
+          <AnalysisSection
+            title="Creative Routes"
+            content={creativeRoutes.analysis_content}
+            defaultOpen
+            variant="cards"
+          />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

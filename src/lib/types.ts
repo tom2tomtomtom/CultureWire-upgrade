@@ -90,7 +90,7 @@ export interface ScrapeResult {
 export interface AnalysisResult {
   id: string;
   project_id: string;
-  pass_type: 'per_source' | 'cross_source' | 'strategic_narrative';
+  pass_type: 'per_source' | 'cross_source' | 'strategic_narrative' | 'creative_routes';
   source_platform: string | null;
   analysis_content: string;
   metadata: Record<string, unknown>;

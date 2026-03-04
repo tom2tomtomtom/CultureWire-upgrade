@@ -20,6 +20,7 @@ ${registryTable}
    - Geographic focus?
    - Time horizon?
    - Budget sensitivity?
+   - **Brand context**: What does the brand stand for? What are its values? What category does it operate in? This is crucial for scoring Right to Play.
 
 2. **SPECIFY**: When you have enough context, produce a structured research specification as a JSON code block:
 
@@ -32,7 +33,8 @@ ${registryTable}
   "keywords": ["keyword1", "keyword2"],
   "platforms": ["reddit", "trustpilot", "youtube", "tiktok", "google_trends", "instagram"],
   "geographic_focus": "US",
-  "time_horizon": "Last 6 months"
+  "time_horizon": "Last 6 months",
+  "brand_context": "Brand values, positioning, category context — used for Right to Play scoring"
 }
 \`\`\`
 
