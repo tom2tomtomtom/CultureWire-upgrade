@@ -4,6 +4,152 @@
  * Runs BEFORE synthesis so Claude gets pre-scored data.
  */
 
+/**
+ * Normalize raw items from Apify to consistent field names.
+ * Different Apify actors use different schemas — this maps them all
+ * to the canonical field names our scoring functions expect.
+ */
+export function normalizeItems(
+  platform: string,
+  items: Record<string, unknown>[]
+): Record<string, unknown>[] {
+  switch (platform) {
+    case 'youtube':
+      return items.map(normalizeYouTubeItem);
+    case 'instagram':
+      return items.map(normalizeInstagramItem);
+    case 'tiktok':
+      return items.map(normalizeTikTokItem);
+    default:
+      return items;
+  }
+}
+
+function num(v: unknown): number {
+  if (v === null || v === undefined) return 0;
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
+
+function str(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  return String(v);
+}
+
+function normalizeYouTubeItem(item: Record<string, unknown>): Record<string, unknown> {
+  const stats = item.statistics as Record<string, unknown> | undefined;
+  const snippet = item.snippet as Record<string, unknown> | undefined;
+  const contentDetails = item.contentDetails as Record<string, unknown> | undefined;
+
+  return {
+    ...item,
+    // Title: try snippet.title → title
+    title: str(item.title || snippet?.title || item.name || ''),
+    // Description: try snippet.description → description → text
+    description: str(item.description || snippet?.description || item.text || ''),
+    // Channel: grow_media actor uses channelName, YouTube API uses channelTitle
+    channelTitle: str(item.channelTitle || snippet?.channelTitle || item.channelName || item.channel || ''),
+    // Published date: grow_media uses "date", YouTube API uses "publishedAt"
+    publishedAt: str(item.publishedAt || snippet?.publishedAt || item.date || item.uploadDate || ''),
+    // Video ID
+    id: str(item.id || item.videoId || ''),
+    videoId: str(item.videoId || item.id || ''),
+    // Views: try multiple field names + nested statistics
+    viewCount: num(item.viewCount || stats?.viewCount || item.views || item.view_count || 0),
+    // Likes: grow_media uses "likes", YouTube API uses "likeCount"
+    likeCount: num(item.likeCount || stats?.likeCount || item.likes || item.like_count || item.numberOfLikes || 0),
+    // Comments: grow_media uses "commentsCount", YouTube API uses "commentCount"
+    commentCount: num(item.commentCount || item.commentsCount || stats?.commentCount || item.comments || item.comment_count || item.numberOfComments || 0),
+    // Duration
+    duration: str(item.duration || contentDetails?.duration || ''),
+    // URL
+    url: str(item.url || item.link || ''),
+    // Thumbnails: grow_media uses thumbnailUrl
+    thumbnails: item.thumbnails || snippet?.thumbnails || item.thumbnailUrl || item.thumbnail || null,
+  };
+}
+
+function normalizeInstagramItem(item: Record<string, unknown>): Record<string, unknown> {
+  // Instagram scraper can return post-level data or hashtag-level metadata.
+  // Post-level fields: likesCount, commentsCount, caption, ownerUsername, displayUrl, url, timestamp
+  // Hashtag-level (apify/instagram-scraper): name, postsCount, url, searchTerm (no engagement!)
+  // Some actors: likes, comments (no "Count" suffix)
+
+  // Detect hashtag metadata vs post data
+  const isHashtagMeta = Boolean(item.postsCount && item.name && !item.likesCount && !item.likes && !item.caption);
+
+  if (isHashtagMeta) {
+    // This is hashtag overview data — map to a useful structure
+    return {
+      ...item,
+      // Use hashtag name as title
+      caption: `#${item.name} — ${num(item.postsCount).toLocaleString()} posts`,
+      likesCount: 0,
+      commentsCount: 0,
+      videoViewCount: 0,
+      ownerUsername: '',
+      // Build a useful explore URL
+      url: str(item.url || `https://www.instagram.com/explore/tags/${item.name}`),
+      displayUrl: '',
+      timestamp: '',
+      hashtags: [str(item.name)],
+      // Preserve metadata for analysis
+      _isHashtagMeta: true,
+      _postsCount: num(item.postsCount),
+    };
+  }
+
+  return {
+    ...item,
+    // Likes: try multiple field names
+    likesCount: num(item.likesCount || item.likes || item.likeCount || item.like_count || 0),
+    // Comments: try multiple field names
+    commentsCount: num(item.commentsCount || item.comments || item.commentCount || item.comment_count || 0),
+    // Video views
+    videoViewCount: num(item.videoViewCount || item.videoViews || item.video_view_count || 0),
+    // Caption
+    caption: str(item.caption || item.text || item.description || ''),
+    // Owner
+    ownerUsername: str(item.ownerUsername || item.username || item.owner || item.authorUsername || ''),
+    // URL
+    url: str(item.url || item.link || item.postUrl || ''),
+    // Display image
+    displayUrl: str(item.displayUrl || item.thumbnailUrl || item.imageUrl || item.displaySrc || ''),
+    // Timestamp
+    timestamp: str(item.timestamp || item.takenAt || item.date || item.createdAt || ''),
+    // Hashtags
+    hashtags: item.hashtags || item.tags || [],
+  };
+}
+
+function normalizeTikTokItem(item: Record<string, unknown>): Record<string, unknown> {
+  const stats = item.stats as Record<string, unknown> | undefined;
+  const videoMeta = item.videoMeta as Record<string, unknown> | undefined;
+  const authorMeta = item.authorMeta as Record<string, unknown> | undefined;
+
+  return {
+    ...item,
+    // Plays: try stats.playCount, playCount, plays
+    playCount: num(item.playCount || stats?.playCount || item.plays || item.play_count || 0),
+    // Likes: diggCount is TikTok's name for likes
+    diggCount: num(item.diggCount || stats?.diggCount || item.likes || item.likeCount || stats?.likeCount || 0),
+    // Shares
+    shareCount: num(item.shareCount || stats?.shareCount || item.shares || 0),
+    // Comments
+    commentCount: num(item.commentCount || stats?.commentCount || item.comments || 0),
+    // Text
+    text: str(item.text || item.desc || item.description || item.caption || ''),
+    // Author
+    authorMeta: authorMeta || (item.author ? { name: str(item.author) } : undefined),
+    // Video meta
+    videoMeta: videoMeta || null,
+    // Cover/thumbnail
+    cover: str(item.cover || videoMeta?.coverUrl || item.thumbnail || ''),
+    // URL
+    webVideoUrl: str(item.webVideoUrl || item.url || item.link || ''),
+  };
+}
+
 export interface TopItemDisplay {
   _score: number;
   _tier: string;
@@ -50,19 +196,22 @@ export function scoreItems(
 ): ScoredItem[] {
   if (items.length === 0) return [];
 
+  // Normalize field names before scoring
+  const normalized = normalizeItems(platform, items);
+
   switch (platform) {
     case 'reddit':
-      return scoreReddit(items);
+      return scoreReddit(normalized);
     case 'youtube':
-      return scoreYouTube(items);
+      return scoreYouTube(normalized);
     case 'tiktok':
-      return scoreTikTok(items);
+      return scoreTikTok(normalized);
     case 'instagram':
-      return scoreInstagram(items);
+      return scoreInstagram(normalized);
     case 'trustpilot':
-      return scoreTrustpilot(items);
+      return scoreTrustpilot(normalized);
     default:
-      return items.map((item) => ({
+      return normalized.map((item) => ({
         ...item,
         _score: 50,
         _tier: 'MONITOR',

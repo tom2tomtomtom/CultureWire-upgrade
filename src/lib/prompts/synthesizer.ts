@@ -195,7 +195,7 @@ TRUSTPILOT-SPECIFIC ANALYSIS:
 
   youtube: `
 YOUTUBE-SPECIFIC ANALYSIS:
-- Key fields: title, description, channelTitle, viewCount, likeCount, commentCount, publishedAt
+- Key fields: title, text/description, channelTitle/channelName, viewCount, likeCount/likes, commentCount/commentsCount, publishedAt/date
 - Engagement rate = (likes + comments) / views × 100. Average: 2-5%, excellent: >8%.
 - Identify top channels — who dominates this topic and what angle do they take?
 - Classify channel tiers: Nano (<10K subs), Micro (10K-100K), Mid-tier (100K-500K), Macro (500K+).
@@ -220,15 +220,15 @@ TIKTOK-SPECIFIC ANALYSIS:
 
   instagram: `
 INSTAGRAM-SPECIFIC ANALYSIS:
-- Key fields: caption, likesCount, commentsCount, timestamp, ownerUsername, hashtags, locationName, videoViewCount
+- Key fields: caption, likesCount, commentsCount, timestamp, ownerUsername, hashtags, locationName, displayUrl, type
 - Engagement rate = (likes + comments) / estimated followers × 100. Average: 1-3%, excellent: >6%.
-- Reels get 2-3x more reach than feed posts — note format distribution.
+- Post types: Image, Video, Carousel (Sidecar). Reels/Videos get 2-3x more reach than feed posts.
 - Cluster by hashtags — which hashtag combinations drive the most engagement?
 - Analyze caption tone: aspirational, educational, controversial, humorous?
-- Creator tier classification: Nano, Micro, Mid-tier, Macro, Mega.
+- Creator analysis: identify top creators by total likes, note username patterns and posting frequency.
 - Visual content signals: what types of posts (carousel, reel, single image) perform best?
-- Location patterns: where is this conversation happening geographically?
-- Create a table of top 5 posts by likes with caption snippet, username, likes, comments, creator tier.
+- Location patterns: where is this conversation happening geographically? Use locationName field.
+- Create a table of top 5 posts by likes with caption snippet, username, likes, comments, location.
 - Instagram reveals aspirational culture — how people WANT to be seen engaging with a topic.`,
 
   google_trends: `

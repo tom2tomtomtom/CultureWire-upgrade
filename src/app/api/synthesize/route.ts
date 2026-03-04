@@ -8,7 +8,7 @@ import {
   buildStrategicNarrativePrompt,
   buildCreativeRoutesPrompt,
 } from '@/lib/prompts/synthesizer';
-import { scoreItems, toDisplayItems, buildScoredItemsSummary } from '@/lib/scoring';
+import { scoreItems, toDisplayItems, buildScoredItemsSummary, normalizeItems } from '@/lib/scoring';
 import type { ResearchSpec, ScrapeResult } from '@/lib/types';
 
 const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
@@ -80,11 +80,14 @@ function buildDataSummary(platform: string, items: Record<string, unknown>[]): s
     lines.push(`Company replies: ${withReply} of ${count} (${Math.round((withReply / count) * 100)}%)`);
   } else if (platform === 'youtube') {
     const views = items.map((i) => Number(i.viewCount) || 0);
-    const likes = items.map((i) => Number(i.likeCount) || 0);
+    // grow_media actor uses "likes" not "likeCount", and "commentsCount" not "commentCount"
+    const likes = items.map((i) => Number(i.likeCount || i.likes) || 0);
+    const comments = items.map((i) => Number(i.commentCount || i.commentsCount) || 0);
     lines.push(`Total views: ${views.reduce((a, b) => a + b, 0).toLocaleString()}, avg ${Math.round(views.reduce((a, b) => a + b, 0) / views.length).toLocaleString()}`);
     lines.push(`Avg likes: ${Math.round(likes.reduce((a, b) => a + b, 0) / likes.length).toLocaleString()}`);
+    lines.push(`Avg comments: ${Math.round(comments.reduce((a, b) => a + b, 0) / comments.length).toLocaleString()}`);
     const channels: Record<string, number> = {};
-    for (const i of items) { const c = String(i.channelTitle || ''); if (c) channels[c] = (channels[c] || 0) + 1; }
+    for (const i of items) { const c = String(i.channelTitle || i.channelName || ''); if (c) channels[c] = (channels[c] || 0) + 1; }
     const topChannels = Object.entries(channels).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, n]) => `${c} (${n})`).join(', ');
     if (topChannels) lines.push(`Top channels: ${topChannels}`);
   } else if (platform === 'tiktok') {
@@ -97,14 +100,25 @@ function buildDataSummary(platform: string, items: Record<string, unknown>[]): s
     const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t, c]) => `#${t} (${c})`).join(', ');
     if (topTags) lines.push(`Top hashtags: ${topTags}`);
   } else if (platform === 'instagram') {
-    const likes = items.map((i) => Number(i.likesCount) || 0);
-    const comments = items.map((i) => Number(i.commentsCount) || 0);
+    const likes = items.map((i) => Number(i.likesCount || i.likes) || 0);
+    const comments = items.map((i) => Number(i.commentsCount || i.comments) || 0);
     lines.push(`Total likes: ${likes.reduce((a, b) => a + b, 0).toLocaleString()}, avg ${Math.round(likes.reduce((a, b) => a + b, 0) / likes.length).toLocaleString()}`);
     lines.push(`Total comments: ${comments.reduce((a, b) => a + b, 0).toLocaleString()}`);
+    // Post types
+    const types: Record<string, number> = {};
+    for (const i of items) { const t = String(i.type || 'unknown'); types[t] = (types[t] || 0) + 1; }
+    lines.push(`Post types: ${Object.entries(types).map(([t, c]) => `${t}: ${c}`).join(', ')}`);
+    // Locations
+    const locations: Record<string, number> = {};
+    for (const i of items) { const l = String(i.locationName || ''); if (l) locations[l] = (locations[l] || 0) + 1; }
+    const topLocs = Object.entries(locations).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([l, c]) => `${l} (${c})`).join(', ');
+    if (topLocs) lines.push(`Top locations: ${topLocs}`);
+    // Creators
     const usernames: Record<string, number> = {};
     for (const i of items) { const u = String(i.ownerUsername || ''); if (u) usernames[u] = (usernames[u] || 0) + 1; }
     const topUsers = Object.entries(usernames).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([u, c]) => `@${u} (${c})`).join(', ');
     if (topUsers) lines.push(`Top creators: ${topUsers}`);
+    // Hashtags
     const hashtags = items.flatMap((i) => Array.isArray(i.hashtags) ? (i.hashtags as string[]).map((h) => String(h)) : []);
     const tagCounts: Record<string, number> = {};
     for (const h of hashtags) { tagCounts[h] = (tagCounts[h] || 0) + 1; }
@@ -204,7 +218,9 @@ export async function POST(request: NextRequest) {
 
       for (const [platform, platformResults] of byPlatform) {
         console.log(`[synthesize] Processing ${platform}...`);
-        const allItems = platformResults.flatMap((r) => r.raw_data);
+        const rawItems = platformResults.flatMap((r) => r.raw_data);
+        // Normalize field names from various Apify actor schemas
+        const allItems = normalizeItems(platform, rawItems);
         const systemPrompt = buildPerSourcePrompt(platform, researchSpec);
 
         // Score items deterministically before sending to Claude

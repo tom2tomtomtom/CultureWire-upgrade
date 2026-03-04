@@ -59,11 +59,11 @@ export function buildPlanGenerationPrompt(): string {
 Given the research spec, determine the optimal search terms, subreddits, hashtags, brand URLs, and keywords for each platform.
 
 Output a JSON array where each item has:
-- platform: one of "reddit", "trustpilot", "youtube", "tiktok", "google_trends"
+- platform: one of "reddit", "trustpilot", "youtube", "tiktok", "google_trends", "instagram"
 - keywords: search terms for this platform
 - brands: brand names (for Trustpilot)
 - subreddits: specific subreddits (for Reddit)
-- hashtags: hashtags (for TikTok)
+- hashtags: hashtags (for TikTok and Instagram — Instagram searches by hashtag)
 - maxResults: number of results to collect
 - rationale: why this search will answer the research questions
 

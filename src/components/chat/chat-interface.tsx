@@ -61,82 +61,110 @@ export function ChatInterface({ projectId, onSpecGenerated }: ChatInterfaceProps
     }
   };
 
+  const isEmpty = messages.length === 0 && !isStreaming;
+
   return (
     <div className="flex h-[calc(100vh-10rem)] flex-col">
-      {/* Messages */}
-      <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
-        <div className={`pb-4 ${messages.length === 0 && !isStreaming ? 'flex h-full items-end' : 'space-y-4'}`}>
-          {messages.length === 0 && !isStreaming && (
-            <div className="w-full space-y-4 pb-2">
-              <PdfUpload
-                projectId={projectId}
-                onUploadComplete={(text) => {
-                  sendMessage(
-                    `I've uploaded a brief document. Here's a summary of what I need researched:\n\n${text.slice(0, 2000)}`
-                  );
-                }}
-              />
-              <p className="text-center text-sm text-muted-foreground">
-                or start with a prompt
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  'How do Gen Z consumers talk about skincare on Reddit and TikTok?',
-                  'What are the top complaints about meal kit delivery services?',
-                  'Research competitor sentiment for electric vehicle brands in the UK',
-                  'Find trending conversations about AI tools in creative industries',
-                ].map((prompt) => (
-                  <button
-                    key={prompt}
-                    onClick={() => setInput(prompt)}
-                    className="rounded-lg border border-border bg-muted/30 p-3 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      {isEmpty ? (
+        /* Empty state: center everything vertically */
+        <div className="flex flex-1 flex-col items-center justify-center px-4">
+          <div className="w-full max-w-2xl space-y-4">
+            <PdfUpload
+              projectId={projectId}
+              onUploadComplete={(text) => {
+                sendMessage(
+                  `I've uploaded a brief document. Here's a summary of what I need researched:\n\n${text.slice(0, 2000)}`
+                );
+              }}
+            />
+            <p className="text-center text-sm text-muted-foreground">
+              or start with a prompt
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                'How do Gen Z consumers talk about skincare on Reddit and TikTok?',
+                'What are the top complaints about meal kit delivery services?',
+                'Research competitor sentiment for electric vehicle brands in the UK',
+                'Find trending conversations about AI tools in creative industries',
+              ].map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => setInput(prompt)}
+                  className="rounded-lg border border-border bg-muted/30 p-3 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+            <div className="pt-4">
+              <div className="flex gap-2">
+                <Textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe your research needs..."
+                  className="min-h-[80px] resize-none"
+                  disabled={isStreaming}
+                />
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="icon"
+                    onClick={handleSubmit}
+                    disabled={!input.trim()}
                   >
-                    {prompt}
-                  </button>
-                ))}
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
-          )}
-
-          {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
-
-          {isStreaming && streamingContent && (
-            <StreamingMessage content={streamingContent} />
-          )}
-        </div>
-      </ScrollArea>
-
-      {/* Input */}
-      <div className="border-t pt-4">
-        <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Describe your research needs..."
-            className="min-h-[80px] resize-none"
-            disabled={isStreaming}
-          />
-          <div className="flex flex-col gap-2">
-            {isStreaming ? (
-              <Button variant="destructive" size="icon" onClick={cancel}>
-                <Square className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                size="icon"
-                onClick={handleSubmit}
-                disabled={!input.trim()}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            )}
           </div>
         </div>
-      </div>
+      ) : (
+        /* Conversation state: scrollable messages + input at bottom */
+        <>
+          <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
+            <div className="space-y-4 pb-4">
+              {messages.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} />
+              ))}
+
+              {isStreaming && streamingContent && (
+                <StreamingMessage content={streamingContent} />
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="border-t pt-4">
+            <div className="flex gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Describe your research needs..."
+                className="min-h-[80px] resize-none"
+                disabled={isStreaming}
+              />
+              <div className="flex flex-col gap-2">
+                {isStreaming ? (
+                  <Button variant="destructive" size="icon" onClick={cancel}>
+                    <Square className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    onClick={handleSubmit}
+                    disabled={!input.trim()}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
