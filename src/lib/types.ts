@@ -3,7 +3,7 @@
 // ============================================
 
 export type ProjectStatus = 'draft' | 'planning' | 'executing' | 'synthesizing' | 'complete' | 'failed';
-export type Platform = 'reddit' | 'trustpilot' | 'youtube' | 'tiktok' | 'google_trends';
+export type Platform = 'reddit' | 'trustpilot' | 'youtube' | 'tiktok' | 'google_trends' | 'instagram';
 
 export interface Project {
   id: string;

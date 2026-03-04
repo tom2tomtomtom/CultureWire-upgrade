@@ -30,14 +30,21 @@ export function DataTable({ headers, rows }: DataTableProps) {
               <tr key={i} className="border-b last:border-0">
                 {headers.map((h) => {
                   const value = row[h];
-                  const display =
+                  const full =
                     value === null || value === undefined
                       ? ''
                       : typeof value === 'object'
-                        ? JSON.stringify(value).slice(0, 100)
-                        : String(value).slice(0, 200);
+                        ? JSON.stringify(value)
+                        : String(value);
+                  const limit = typeof value === 'object' ? 200 : 300;
+                  const display = full.length > limit ? full.slice(0, limit) + '…' : full;
+                  const isTruncated = full.length > limit;
                   return (
-                    <td key={h} className="max-w-[300px] truncate px-3 py-2">
+                    <td
+                      key={h}
+                      className="max-w-[300px] truncate px-3 py-2"
+                      title={isTruncated ? full.slice(0, 500) : undefined}
+                    >
                       {display}
                     </td>
                   );

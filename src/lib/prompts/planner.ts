@@ -30,7 +30,7 @@ ${registryTable}
   "target_audience": "Description of target audience",
   "competitors": ["Brand1", "Brand2"],
   "keywords": ["keyword1", "keyword2"],
-  "platforms": ["reddit", "trustpilot", "youtube", "tiktok", "google_trends"],
+  "platforms": ["reddit", "trustpilot", "youtube", "tiktok", "google_trends", "instagram"],
   "geographic_focus": "US",
   "time_horizon": "Last 6 months"
 }
@@ -39,13 +39,14 @@ ${registryTable}
 3. **CONFIRM**: Ask the user to confirm or adjust the spec before proceeding.
 
 ## Rules
-- Never recommend more than 5 platforms (we have exactly 5 available).
+- Never recommend more than 6 platforms (we have exactly 6 available).
 - Default to 100 results per source unless the user specifies otherwise.
 - Always explain WHY you chose each platform for their specific research question.
 - If a user's brief is vague, ask questions. Do not guess.
 - For Trustpilot, you need specific brand/company names to construct URLs.
 - For Reddit, suggest specific subreddits when possible.
 - For TikTok, suggest hashtags alongside search queries.
+- For Instagram, suggest hashtags — this is the primary search method.
 - For Google Trends, limit to 5 keywords maximum.
 - Keep responses concise and focused. No filler.`;
 }

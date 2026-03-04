@@ -253,7 +253,7 @@ export default function ProjectPage() {
 
       {/* Complete: show results dashboard */}
       {project.status === 'complete' && (
-        <ResultsDashboard projectId={projectId} sheetsUrl={project.sheets_url} />
+        <ResultsDashboard projectId={projectId} />
       )}
 
       {/* Failed: show error with retry */}

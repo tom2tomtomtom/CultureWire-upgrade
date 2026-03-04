@@ -4,6 +4,196 @@ import { ACTOR_REGISTRY, type PlannerParams } from '@/lib/actor-registry';
 import { estimateActorCost } from '@/lib/cost';
 import type { Platform, PlannedActorRun, ResearchSpec } from '@/lib/types';
 
+// ============================================
+// THREE-LAYER COLLECTION STRATEGY
+// ============================================
+// Layer 1 (Brand/Direct): Competitor-specific searches — what people say about specific brands
+// Layer 2 (Category): Research keyword searches — the broader category conversation
+// Layer 3 (Discovery): Trending/hot content — what's culturally relevant right now
+//
+// This mirrors the Uncommon plugin's collection approach for richer, more diverse data.
+
+function buildLayeredRuns(
+  platform: Platform,
+  spec: ResearchSpec
+): PlannedActorRun[] {
+  const entry = ACTOR_REGISTRY[platform];
+  if (!entry) return [];
+
+  const geo = spec.geographic_focus || 'US';
+  const timeRange = spec.time_horizon || 'last 6 months';
+  const brands = spec.competitors;
+  const keywords = spec.keywords;
+  const hashtags = keywords.map((k) => k.replace(/\s+/g, ''));
+  const runs: PlannedActorRun[] = [];
+
+  function addRun(
+    layerLabel: string,
+    params: PlannerParams,
+    rationale: string,
+    resultOverride?: number
+  ) {
+    const inputParams = entry.buildInput(params);
+    const resultCount = resultOverride || params.maxResults;
+    const costCents = estimateActorCost(platform, resultCount);
+    runs.push({
+      platform,
+      actorId: entry.id,
+      displayName: entry.displayName,
+      inputParams,
+      estimatedCostCents: costCents,
+      estimatedResults: resultCount,
+      rationale: `[${layerLabel}] ${rationale}`,
+    });
+  }
+
+  switch (platform) {
+    case 'reddit': {
+      // Reddit is free — be generous with layers
+
+      // Layer 1: Brand mentions (if competitors exist)
+      if (brands.length > 0) {
+        addRun('Brand', {
+          keywords: brands,
+          brands, subreddits: [], hashtags: [], urls: [],
+          geo, timeRange, maxResults: 50,
+        }, `Brand-specific conversations about ${brands.join(', ')}`, 50);
+      }
+
+      // Layer 2: Category keywords — the core research topic
+      addRun('Category', {
+        keywords,
+        brands, subreddits: [], hashtags: [], urls: [],
+        geo, timeRange, maxResults: 80,
+      }, `Category conversations: ${keywords.slice(0, 3).join(', ')}`, 80);
+
+      // Layer 3: Discovery — trending/hot posts in the space
+      const discoveryParams: PlannerParams = {
+        keywords,
+        brands, subreddits: [], hashtags: [], urls: [],
+        geo, timeRange, maxResults: 50,
+      };
+      const discoveryInput = entry.buildInput(discoveryParams);
+      // Override sort to 'hot' for trending discovery
+      (discoveryInput as Record<string, unknown>).sort = 'hot';
+      runs.push({
+        platform,
+        actorId: entry.id,
+        displayName: entry.displayName,
+        inputParams: discoveryInput,
+        estimatedCostCents: 0,
+        estimatedResults: 50,
+        rationale: '[Discovery] Trending/hot conversations to catch cultural momentum',
+      });
+      break;
+    }
+
+    case 'youtube': {
+      // Layer 1: Brand-specific videos (if competitors exist)
+      if (brands.length > 0) {
+        addRun('Brand', {
+          keywords: brands.slice(0, 3).map((b) => `${b} review`),
+          brands, subreddits: [], hashtags: [], urls: [],
+          geo, timeRange, maxResults: 50,
+        }, `Brand-focused content: ${brands.slice(0, 3).join(', ')} reviews`, 50);
+      }
+
+      // Layer 2: Category keyword search
+      addRun('Category', {
+        keywords: keywords.slice(0, 3),
+        brands, subreddits: [], hashtags: [], urls: [],
+        geo, timeRange, maxResults: 60,
+      }, `Category content: ${keywords.slice(0, 3).join(', ')}`, 60);
+
+      // Layer 3: Popular/trending — sort by viewCount
+      const trendingParams: PlannerParams = {
+        keywords: keywords.slice(0, 2),
+        brands, subreddits: [], hashtags: [], urls: [],
+        geo, timeRange, maxResults: 40,
+      };
+      const trendingInput = entry.buildInput(trendingParams);
+      (trendingInput as Record<string, unknown>).order = 'viewCount';
+      runs.push({
+        platform,
+        actorId: entry.id,
+        displayName: entry.displayName,
+        inputParams: trendingInput,
+        estimatedCostCents: estimateActorCost(platform, 40),
+        estimatedResults: 40,
+        rationale: '[Discovery] Most-viewed content to identify dominant narratives',
+      });
+      break;
+    }
+
+    case 'tiktok': {
+      // Layer 1: Keyword search — direct topic content
+      addRun('Category', {
+        keywords,
+        brands, subreddits: [], hashtags: [],
+        urls: [], geo, timeRange, maxResults: 60,
+      }, `Topic searches: ${keywords.slice(0, 3).join(', ')}`, 60);
+
+      // Layer 2: Hashtag discovery — cultural conversation
+      const trendingHashtags = [
+        ...hashtags,
+        ...(brands.length > 0 ? brands.map((b) => b.replace(/\s+/g, '').toLowerCase()) : []),
+      ];
+      addRun('Discovery', {
+        keywords: [],
+        brands, subreddits: [],
+        hashtags: trendingHashtags,
+        urls: [], geo, timeRange, maxResults: 60,
+      }, `Hashtag discovery: #${trendingHashtags.slice(0, 3).join(', #')}`, 60);
+      break;
+    }
+
+    case 'trustpilot': {
+      // Trustpilot is URL-based per brand — no layering, just one run
+      if (brands.length > 0) {
+        addRun('Brand', {
+          keywords, brands, subreddits: [], hashtags: [], urls: [],
+          geo, timeRange, maxResults: entry.defaults.maxResults,
+        }, `Reviews for ${brands.join(', ')}`, entry.defaults.maxResults);
+      }
+      break;
+    }
+
+    case 'google_trends': {
+      // Google Trends already provides trend data — one run is sufficient
+      addRun('Category', {
+        keywords: keywords.slice(0, 5),
+        brands, subreddits: [], hashtags: [], urls: [],
+        geo, timeRange, maxResults: entry.defaults.maxResults,
+      }, `Trend analysis for: ${keywords.slice(0, 5).join(', ')}`, entry.defaults.maxResults);
+      break;
+    }
+
+    case 'instagram': {
+      // Layer 1: Hashtag search — core topic content
+      addRun('Category', {
+        keywords,
+        brands, subreddits: [],
+        hashtags,
+        urls: [], geo, timeRange, maxResults: 60,
+      }, `Hashtag posts: #${hashtags.slice(0, 3).join(', #')}`, 60);
+
+      // Layer 2: Brand profiles (if competitors exist)
+      if (brands.length > 0) {
+        const brandHashtags = brands.map((b) => b.replace(/\s+/g, '').toLowerCase());
+        addRun('Brand', {
+          keywords: [],
+          brands, subreddits: [],
+          hashtags: brandHashtags,
+          urls: [], geo, timeRange, maxResults: 60,
+        }, `Brand content: #${brandHashtags.slice(0, 3).join(', #')}`, 60);
+      }
+      break;
+    }
+  }
+
+  return runs;
+}
+
 export async function GET(request: NextRequest) {
   const projectId = request.nextUrl.searchParams.get('projectId');
   if (!projectId) {
@@ -47,36 +237,12 @@ export async function POST(request: NextRequest) {
 
   const researchSpec = spec as ResearchSpec;
 
-  // Build execution plan from spec
+  // Build three-layer execution plan from spec
   const plannedRuns: PlannedActorRun[] = [];
 
   for (const platform of researchSpec.platforms) {
-    const entry = ACTOR_REGISTRY[platform as Platform];
-    if (!entry) continue;
-
-    const params: PlannerParams = {
-      keywords: researchSpec.keywords,
-      brands: researchSpec.competitors,
-      subreddits: [], // Could be extracted from keywords
-      hashtags: researchSpec.keywords.map((k) => k.replace(/\s+/g, '')),
-      urls: [],
-      geo: researchSpec.geographic_focus || 'US',
-      timeRange: researchSpec.time_horizon || 'last 6 months',
-      maxResults: entry.defaults.maxResults,
-    };
-
-    const inputParams = entry.buildInput(params);
-    const estimatedCostCents = estimateActorCost(platform as Platform, entry.defaults.maxResults);
-
-    plannedRuns.push({
-      platform: platform as Platform,
-      actorId: entry.id,
-      displayName: entry.displayName,
-      inputParams,
-      estimatedCostCents,
-      estimatedResults: entry.defaults.maxResults,
-      rationale: `${entry.displayName}: ${entry.useCases[0]}`,
-    });
+    const layeredRuns = buildLayeredRuns(platform as Platform, researchSpec);
+    plannedRuns.push(...layeredRuns);
   }
 
   const totalCost = plannedRuns.reduce((sum, r) => sum + r.estimatedCostCents, 0);

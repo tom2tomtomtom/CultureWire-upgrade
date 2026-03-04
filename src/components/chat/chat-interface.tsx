@@ -65,13 +65,21 @@ export function ChatInterface({ projectId, onSpecGenerated }: ChatInterfaceProps
     <div className="flex h-[calc(100vh-10rem)] flex-col">
       {/* Messages */}
       <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
-        <div className="space-y-4 pb-4">
+        <div className={`pb-4 ${messages.length === 0 && !isStreaming ? 'flex h-full items-end' : 'space-y-4'}`}>
           {messages.length === 0 && !isStreaming && (
-            <div className="space-y-4 py-8">
-              <p className="text-center text-muted-foreground">
-                Describe your research needs, or upload a PDF brief to get started.
+            <div className="w-full space-y-4 pb-2">
+              <PdfUpload
+                projectId={projectId}
+                onUploadComplete={(text) => {
+                  sendMessage(
+                    `I've uploaded a brief document. Here's a summary of what I need researched:\n\n${text.slice(0, 2000)}`
+                  );
+                }}
+              />
+              <p className="text-center text-sm text-muted-foreground">
+                or start with a prompt
               </p>
-              <div className="grid grid-cols-2 gap-2 px-8">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   'How do Gen Z consumers talk about skincare on Reddit and TikTok?',
                   'What are the top complaints about meal kit delivery services?',
@@ -87,14 +95,6 @@ export function ChatInterface({ projectId, onSpecGenerated }: ChatInterfaceProps
                   </button>
                 ))}
               </div>
-              <PdfUpload
-                projectId={projectId}
-                onUploadComplete={(text) => {
-                  sendMessage(
-                    `I've uploaded a brief document. Here's a summary of what I need researched:\n\n${text.slice(0, 2000)}`
-                  );
-                }}
-              />
             </div>
           )}
 

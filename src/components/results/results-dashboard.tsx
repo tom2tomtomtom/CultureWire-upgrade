@@ -1,25 +1,30 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { Download, FileText, Globe, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { StrategicSummary } from './strategic-summary';
 import { AnalysisSection } from './analysis-section';
 import { PlatformTab } from './platform-tab';
 import { toast } from 'sonner';
-import type { AnalysisResult, ScrapeResult } from '@/lib/types';
+import { ACTOR_REGISTRY } from '@/lib/actor-registry';
+import type { AnalysisResult, Platform, ScrapeResult } from '@/lib/types';
 
 interface ResultsDashboardProps {
   projectId: string;
   sheetsUrl?: string | null;
 }
 
-export function ResultsDashboard({ projectId, sheetsUrl }: ResultsDashboardProps) {
+function platformDisplayName(key: string): string {
+  const entry = ACTOR_REGISTRY[key as Platform];
+  return entry?.displayName || key;
+}
+
+export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisResult[]>([]);
-  const [isExporting, setIsExporting] = useState(false);
-  const [sheetLink, setSheetLink] = useState(sheetsUrl);
+  const [isExporting, setIsExporting] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -48,22 +53,30 @@ export function ResultsDashboard({ projectId, sheetsUrl }: ResultsDashboardProps
   const crossSource = analyses.find((a) => a.pass_type === 'cross_source');
   const perSourceAnalyses = analyses.filter((a) => a.pass_type === 'per_source');
 
-  const handleExportSheets = async () => {
-    setIsExporting(true);
+  const handleExport = async (format: 'csv' | 'report' | 'dashboard') => {
+    setIsExporting(format);
     try {
-      const res = await fetch('/api/sheets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId }),
-      });
+      const res = await fetch(`/api/export?projectId=${projectId}&format=${format}`);
       if (!res.ok) throw new Error('Export failed');
-      const data = await res.json();
-      setSheetLink(data.url);
-      toast.success('Exported to Google Sheets');
+
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const match = disposition.match(/filename="(.+)"/);
+      const ext = format === 'csv' ? 'csv' : format === 'dashboard' ? 'html' : 'md';
+      const filename = match?.[1] || `export.${ext}`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`${format === 'csv' ? 'CSV' : 'Report'} downloaded`);
     } catch {
-      toast.error('Failed to export to Google Sheets');
+      toast.error('Export failed');
     } finally {
-      setIsExporting(false);
+      setIsExporting(null);
     }
   };
 
@@ -74,35 +87,52 @@ export function ResultsDashboard({ projectId, sheetsUrl }: ResultsDashboardProps
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {platforms.map((p) => (
             <TabsTrigger key={p} value={p}>
-              {p}
+              {platformDisplayName(p)}
             </TabsTrigger>
           ))}
           <TabsTrigger value="cross-source">Cross-Source</TabsTrigger>
         </TabsList>
 
         <div className="flex gap-2">
-          {sheetLink ? (
-            <Button variant="outline" size="sm" asChild>
-              <a href={sheetLink} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-2 h-3 w-3" />
-                Google Sheet
-              </a>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportSheets}
-              disabled={isExporting}
-            >
-              {isExporting ? (
-                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-              ) : (
-                <ExternalLink className="mr-2 h-3 w-3" />
-              )}
-              Export to Sheets
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport('csv')}
+            disabled={isExporting !== null}
+          >
+            {isExporting === 'csv' ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-3 w-3" />
+            )}
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport('report')}
+            disabled={isExporting !== null}
+          >
+            {isExporting === 'report' ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <FileText className="mr-2 h-3 w-3" />
+            )}
+            Report
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => handleExport('dashboard')}
+            disabled={isExporting !== null}
+          >
+            {isExporting === 'dashboard' ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <Globe className="mr-2 h-3 w-3" />
+            )}
+            Dashboard
+          </Button>
         </div>
       </div>
 

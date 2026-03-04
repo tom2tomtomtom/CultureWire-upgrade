@@ -19,38 +19,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'File must be under 10MB' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  try {
+    // Parse PDF text — this is the only thing we actually need
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const extractedText = await extractTextFromPdf(buffer);
 
-  // Upload to Supabase Storage
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const storagePath = `briefs/${projectId}/${file.name}`;
+    if (!extractedText.trim()) {
+      return NextResponse.json({ error: 'Could not extract text from PDF. The file may be image-based or empty.' }, { status: 422 });
+    }
 
-  const { error: uploadError } = await supabase.storage
-    .from('briefs')
-    .upload(storagePath, buffer, {
-      contentType: 'application/pdf',
-      upsert: true,
-    });
+    // Update project with parsed text
+    const supabase = createServerClient();
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({
+        brief_parsed: extractedText,
+      })
+      .eq('id', projectId);
 
-  if (uploadError) {
-    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 });
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ text: extractedText });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[upload] PDF parse error:', message);
+    return NextResponse.json({ error: `Failed to parse PDF: ${message}` }, { status: 500 });
   }
-
-  // Parse PDF text
-  const extractedText = await extractTextFromPdf(buffer);
-
-  // Update project
-  const { error: updateError } = await supabase
-    .from('projects')
-    .update({
-      brief_pdf_url: storagePath,
-      brief_parsed: extractedText,
-    })
-    .eq('id', projectId);
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ text: extractedText, storagePath });
 }

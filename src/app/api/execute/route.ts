@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
 
   const plannedRuns = plan.plan_data as PlannedActorRun[];
   const jobs: ScrapeJob[] = [];
+  // Map job IDs to their actual platform for correct source_platform storage
+  const jobPlatformMap = new Map<string, string>();
 
   // Start all actors
   for (const run of plannedRuns) {
@@ -106,10 +108,11 @@ export async function POST(request: NextRequest) {
           await supabase.from('scrape_results').insert({
             job_id: job.id,
             project_id: projectId,
-            source_platform: 'reddit',
+            source_platform: run.platform,
             raw_data: items,
             item_count: items.length,
           });
+          jobPlatformMap.set(job.id, run.platform);
           jobs.push(job);
         }
         continue;
@@ -133,7 +136,10 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (job) jobs.push(job);
+      if (job) {
+        jobPlatformMap.set(job.id, run.platform);
+        jobs.push(job);
+      }
     } catch (error) {
       // Insert failed job
       const { data: job } = await supabase
@@ -151,7 +157,10 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (job) jobs.push(job);
+      if (job) {
+        jobPlatformMap.set(job.id, run.platform);
+        jobs.push(job);
+      }
     }
   }
 
@@ -160,7 +169,7 @@ export async function POST(request: NextRequest) {
     const runningJobs = jobs.filter((j) => j.status === 'running' && j.apify_run_id);
     await Promise.allSettled(
       runningJobs.map((j) =>
-        processJob(j.id, projectId, j.apify_run_id!, j.actor_display_name.toLowerCase().replace(/\s+/g, '_'))
+        processJob(j.id, projectId, j.apify_run_id!, jobPlatformMap.get(j.id) || j.actor_display_name.toLowerCase().replace(/\s+/g, '_'))
       )
     );
 

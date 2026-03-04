@@ -72,6 +72,18 @@ const TikTokInputSchema = z.object({
   proxyCountryCode: z.string().default('None'),
 });
 
+const InstagramInputSchema = z.object({
+  directUrls: z.array(z.object({ url: z.string() })).optional(),
+  resultsType: z.enum(['posts', 'comments', 'details']).default('posts'),
+  searchType: z.enum(['hashtag', 'user', 'place']).default('hashtag'),
+  search: z.string().optional(),
+  resultsLimit: z.number().min(1).max(500).default(100),
+  proxy: z.object({
+    useApifyProxy: z.boolean().default(true),
+    apifyProxyGroups: z.array(z.string()).default(['RESIDENTIAL']),
+  }).default({ useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] }),
+});
+
 const GoogleTrendsInputSchema = z.object({
   keywords: z.array(z.string()).min(1).max(5),
   geo: z.string().default('US'),
@@ -156,7 +168,9 @@ export const ACTOR_REGISTRY: Record<Platform, ActorRegistryEntry> = {
     ],
     inputSchema: YouTubeInputSchema,
     buildInput: (params) => ({
-      q: params.keywords.join(' '),
+      q: params.keywords.length <= 3
+        ? params.keywords.join(' | ')
+        : params.keywords.slice(0, 3).join(' | '),
       maxResults: Math.min(params.maxResults, 200),
       order: 'relevance',
       regionCode: params.geo || 'US',
@@ -214,6 +228,31 @@ export const ACTOR_REGISTRY: Record<Platform, ActorRegistryEntry> = {
     extractFields: ['keyword', 'interestOverTime', 'relatedQueries', 'relatedTopics', 'interestByRegion'],
     costProfile: { model: 'pay_per_result', estimatedCostPer100: 250 },
     defaults: { maxResults: 5, timeout: 120 },
+  },
+
+  instagram: {
+    id: 'apify/instagram-scraper',
+    platform: 'instagram',
+    displayName: 'Instagram',
+    description: 'Scrape Instagram posts, hashtags, and profiles. Best for visual trends, influencer landscape, and brand aesthetics.',
+    useCases: [
+      'Visual trend identification',
+      'Influencer and creator landscape',
+      'Brand aesthetic benchmarking',
+      'Hashtag performance analysis',
+      'Audience sentiment via comments',
+    ],
+    inputSchema: InstagramInputSchema,
+    buildInput: (params) => ({
+      search: params.hashtags[0] || params.keywords[0] || '',
+      searchType: 'hashtag' as const,
+      resultsType: 'posts' as const,
+      resultsLimit: Math.min(params.maxResults, 200),
+      proxy: { useApifyProxy: true, apifyProxyGroups: ['RESIDENTIAL'] },
+    }),
+    extractFields: ['caption', 'likesCount', 'commentsCount', 'timestamp', 'ownerUsername', 'hashtags', 'url', 'locationName', 'videoViewCount'],
+    costProfile: { model: 'pay_per_result', estimatedCostPer100: 23 },
+    defaults: { maxResults: 100, timeout: 300 },
   },
 };
 

@@ -11,7 +11,12 @@ import type { ResearchSpec, ScrapeResult } from '@/lib/types';
 
 const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
 
-async function callClaude(system: string, userContent: string): Promise<string> {
+// Fields that contain the actual content — keep these at full length
+const CONTENT_FIELDS = new Set([
+  'title', 'text', 'body', 'description', 'companyReply',
+]);
+
+async function callClaude(system: string, userContent: string, maxTokens = 4096): Promise<string> {
   const anthropic = getAnthropicClient();
 
   for (let i = 0; i < MODELS.length; i++) {
@@ -19,7 +24,7 @@ async function callClaude(system: string, userContent: string): Promise<string> 
     try {
       const response = await anthropic.messages.create({
         model,
-        max_tokens: 4096,
+        max_tokens: maxTokens,
         system,
         messages: [{ role: 'user', content: userContent }],
       });
@@ -41,6 +46,74 @@ async function callClaude(system: string, userContent: string): Promise<string> 
   }
 
   throw new Error('Unreachable');
+}
+
+function buildDataSummary(platform: string, items: Record<string, unknown>[]): string {
+  const count = items.length;
+  const lines: string[] = [`**${platform}** — ${count} items collected`];
+
+  // Date range
+  const dateField = platform === 'tiktok' ? 'createTime' : platform === 'trustpilot' ? 'date' : platform === 'youtube' ? 'publishedAt' : platform === 'instagram' ? 'timestamp' : 'createdAt';
+  const dates = items.map((i) => i[dateField]).filter(Boolean).map((d) => new Date(d as string)).filter((d) => !isNaN(d.getTime())).sort((a, b) => a.getTime() - b.getTime());
+  if (dates.length > 1) {
+    lines.push(`Date range: ${dates[0].toLocaleDateString()} — ${dates[dates.length - 1].toLocaleDateString()}`);
+  }
+
+  // Platform-specific stats
+  if (platform === 'reddit') {
+    const scores = items.map((i) => Number(i.score) || 0);
+    const comments = items.map((i) => Number(i.numberOfComments) || 0);
+    const subs: Record<string, number> = {};
+    for (const i of items) { const s = String(i.communityName || ''); if (s) subs[s] = (subs[s] || 0) + 1; }
+    const topSubs = Object.entries(subs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s, c]) => `${s} (${c})`).join(', ');
+    lines.push(`Score: avg ${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}, max ${Math.max(...scores)}`);
+    lines.push(`Comments: avg ${Math.round(comments.reduce((a, b) => a + b, 0) / comments.length)}`);
+    if (topSubs) lines.push(`Top subreddits: ${topSubs}`);
+  } else if (platform === 'trustpilot') {
+    const ratings = items.map((i) => Number(i.rating) || 0).filter(Boolean);
+    const dist = [1, 2, 3, 4, 5].map((r) => `${r}★: ${ratings.filter((x) => Math.round(x) === r).length}`).join(', ');
+    lines.push(`Avg rating: ${(ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)}/5`);
+    lines.push(`Distribution: ${dist}`);
+    const withReply = items.filter((i) => i.companyReply).length;
+    lines.push(`Company replies: ${withReply} of ${count} (${Math.round((withReply / count) * 100)}%)`);
+  } else if (platform === 'youtube') {
+    const views = items.map((i) => Number(i.viewCount) || 0);
+    const likes = items.map((i) => Number(i.likeCount) || 0);
+    lines.push(`Total views: ${views.reduce((a, b) => a + b, 0).toLocaleString()}, avg ${Math.round(views.reduce((a, b) => a + b, 0) / views.length).toLocaleString()}`);
+    lines.push(`Avg likes: ${Math.round(likes.reduce((a, b) => a + b, 0) / likes.length).toLocaleString()}`);
+    const channels: Record<string, number> = {};
+    for (const i of items) { const c = String(i.channelTitle || ''); if (c) channels[c] = (channels[c] || 0) + 1; }
+    const topChannels = Object.entries(channels).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([c, n]) => `${c} (${n})`).join(', ');
+    if (topChannels) lines.push(`Top channels: ${topChannels}`);
+  } else if (platform === 'tiktok') {
+    const plays = items.map((i) => Number(i.playCount) || 0);
+    const shares = items.map((i) => Number(i.shareCount) || 0);
+    lines.push(`Total plays: ${plays.reduce((a, b) => a + b, 0).toLocaleString()}, avg ${Math.round(plays.reduce((a, b) => a + b, 0) / plays.length).toLocaleString()}`);
+    lines.push(`Total shares: ${shares.reduce((a, b) => a + b, 0).toLocaleString()}`);
+    const hashtags = items.flatMap((i) => Array.isArray(i.hashtags) ? (i.hashtags as { name?: string }[]).map((h) => h.name || String(h)) : []);
+    const tagCounts = hashtags.reduce((acc, h) => { acc[h] = (acc[h] || 0) + 1; return acc; }, {} as Record<string, number>);
+    const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t, c]) => `#${t} (${c})`).join(', ');
+    if (topTags) lines.push(`Top hashtags: ${topTags}`);
+  } else if (platform === 'instagram') {
+    const likes = items.map((i) => Number(i.likesCount) || 0);
+    const comments = items.map((i) => Number(i.commentsCount) || 0);
+    lines.push(`Total likes: ${likes.reduce((a, b) => a + b, 0).toLocaleString()}, avg ${Math.round(likes.reduce((a, b) => a + b, 0) / likes.length).toLocaleString()}`);
+    lines.push(`Total comments: ${comments.reduce((a, b) => a + b, 0).toLocaleString()}`);
+    const usernames: Record<string, number> = {};
+    for (const i of items) { const u = String(i.ownerUsername || ''); if (u) usernames[u] = (usernames[u] || 0) + 1; }
+    const topUsers = Object.entries(usernames).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([u, c]) => `@${u} (${c})`).join(', ');
+    if (topUsers) lines.push(`Top creators: ${topUsers}`);
+    const hashtags = items.flatMap((i) => Array.isArray(i.hashtags) ? (i.hashtags as string[]).map((h) => String(h)) : []);
+    const tagCounts: Record<string, number> = {};
+    for (const h of hashtags) { tagCounts[h] = (tagCounts[h] || 0) + 1; }
+    const topTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([t, c]) => `#${t} (${c})`).join(', ');
+    if (topTags) lines.push(`Top hashtags: ${topTags}`);
+  } else if (platform === 'google_trends') {
+    const keywords = items.map((i) => String(i.keyword || '')).filter(Boolean);
+    if (keywords.length) lines.push(`Keywords tracked: ${keywords.join(', ')}`);
+  }
+
+  return lines.join('\n');
 }
 
 function chunkArray<T>(arr: T[], size: number): T[][] {
@@ -118,18 +191,16 @@ export async function POST(request: NextRequest) {
         const allItems = platformResults.flatMap((r) => r.raw_data);
         const systemPrompt = buildPerSourcePrompt(platform, researchSpec);
 
+        // Keep content fields at full length, truncate metadata/nested objects
         const truncateItem = (item: Record<string, unknown>) => {
           const truncated: Record<string, unknown> = {};
           for (const [key, value] of Object.entries(item)) {
-            if (typeof value === 'string' && value.length > 500) {
-              truncated[key] = value.slice(0, 500) + '...';
+            if (typeof value === 'string') {
+              const limit = CONTENT_FIELDS.has(key) ? 1500 : 300;
+              truncated[key] = value.length > limit ? value.slice(0, limit) + '...' : value;
             } else if (typeof value === 'object' && value !== null) {
               const json = JSON.stringify(value);
-              if (json.length > 1000) {
-                truncated[key] = json.slice(0, 1000) + '...';
-              } else {
-                truncated[key] = value;
-              }
+              truncated[key] = json.length > 500 ? json.slice(0, 500) + '...' : value;
             } else {
               truncated[key] = value;
             }
@@ -142,23 +213,25 @@ export async function POST(request: NextRequest) {
         const chunks = chunkArray(capped, 50);
         let analysis = '';
 
+        const dataSummary = buildDataSummary(platform, allItems);
+
         if (chunks.length === 1) {
           analysis = await callClaude(
             systemPrompt,
-            `Here are ${capped.length} results from ${platform} (${allItems.length} total collected):\n\n${JSON.stringify(capped, null, 2)}`
+            `DATA SUMMARY:\n${dataSummary}\n\n---\n\nHere are ${capped.length} results from ${platform} (${allItems.length} total collected):\n\n${JSON.stringify(capped, null, 2)}`
           );
         } else {
           const chunkSummaries: string[] = [];
           for (const chunk of chunks) {
             const summary = await callClaude(
               systemPrompt,
-              `Summarize the key findings from this batch of ${chunk.length} results:\n\n${JSON.stringify(chunk, null, 2)}`
+              `DATA SUMMARY:\n${dataSummary}\n\n---\n\nSummarize the key findings from this batch of ${chunk.length} results:\n\n${JSON.stringify(chunk, null, 2)}`
             );
             chunkSummaries.push(summary);
           }
           analysis = await callClaude(
             systemPrompt,
-            `Consolidate these ${chunkSummaries.length} batch summaries into a single analysis:\n\n${chunkSummaries.join('\n\n---\n\n')}`
+            `DATA SUMMARY:\n${dataSummary}\n\n---\n\nConsolidate these ${chunkSummaries.length} batch summaries into a single analysis:\n\n${chunkSummaries.join('\n\n---\n\n')}`
           );
         }
 
@@ -182,7 +255,8 @@ export async function POST(request: NextRequest) {
 
       const crossSourceAnalysis = await callClaude(
         buildCrossSourcePrompt(researchSpec),
-        crossSourceInput
+        crossSourceInput,
+        8192
       );
 
       await bgSupabase.from('analysis_results').insert({
@@ -194,10 +268,18 @@ export async function POST(request: NextRequest) {
       });
 
       // ===== PASS 3: Strategic narrative =====
+      // Feed BOTH per-source analyses and cross-source synthesis for full evidence
       console.log('[synthesize] Starting strategic narrative...');
+      const perSourceSection = perSourceAnalyses
+        .map((a) => `### ${a.platform} Analysis\n\n${a.analysis}`)
+        .join('\n\n---\n\n');
+
+      const strategicInput = `## Cross-Source Synthesis\n\n${crossSourceAnalysis}\n\n---\n\n## Per-Source Evidence\n\n${perSourceSection}`;
+
       const strategicNarrative = await callClaude(
         buildStrategicNarrativePrompt(researchSpec),
-        crossSourceAnalysis
+        strategicInput,
+        8192
       );
 
       await bgSupabase.from('analysis_results').insert({

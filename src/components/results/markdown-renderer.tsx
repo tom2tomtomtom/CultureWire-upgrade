@@ -39,9 +39,39 @@ const components: Components = {
     <li className="text-sm leading-relaxed text-muted-foreground">{children}</li>
   ),
   p: ({ children }) => (
-    <p className="my-2.5 text-sm leading-relaxed text-muted-foreground">
+    <p className="my-2.5 text-sm leading-relaxed text-foreground/80">
       {children}
     </p>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary underline underline-offset-2 hover:text-primary/80"
+    >
+      {children}
+    </a>
+  ),
+  table: ({ children }) => (
+    <div className="my-4 overflow-x-auto rounded-lg border">
+      <table className="w-full text-sm">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="border-b bg-muted/50">{children}</thead>
+  ),
+  tbody: ({ children }) => <tbody>{children}</tbody>,
+  tr: ({ children }) => (
+    <tr className="border-b last:border-0">{children}</tr>
+  ),
+  th: ({ children }) => (
+    <th className="px-3 py-2 text-left font-medium text-foreground">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="px-3 py-2 text-muted-foreground">{children}</td>
   ),
 };
 
