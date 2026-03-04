@@ -64,7 +64,7 @@ export function ChatInterface({ projectId, onSpecGenerated }: ChatInterfaceProps
   const isEmpty = messages.length === 0 && !isStreaming;
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {isEmpty ? (
         /* Empty state: center everything vertically */
         <div className="flex flex-1 flex-col items-center justify-center px-4">

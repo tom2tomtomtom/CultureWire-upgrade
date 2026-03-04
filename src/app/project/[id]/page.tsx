@@ -208,8 +208,10 @@ export default function ProjectPage() {
 
   if (!project) return null;
 
+  const showChat = project.status === 'draft' || (project.status === 'planning' && !plan);
+
   return (
-    <div className="space-y-6">
+    <div className={showChat ? 'flex flex-col h-[calc(100vh-6rem)]' : 'space-y-6'}>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground transition-colors">
@@ -219,7 +221,7 @@ export default function ProjectPage() {
         <span className="text-foreground font-medium truncate">{project.title}</span>
       </nav>
 
-      <div>
+      <div className={showChat ? 'mb-2' : ''}>
         <h1 className="text-2xl font-bold">{project.title}</h1>
         {project.description && (
           <p className="text-sm text-muted-foreground">{project.description}</p>
