@@ -55,7 +55,7 @@ export default function ProjectPage() {
     async function init() {
       setIsLoading(true);
       const p = await loadProject();
-      if (p && (p.status === 'planning' || p.status === 'draft')) {
+      if (p) {
         await loadPlan();
       }
       setIsLoading(false);
@@ -174,18 +174,26 @@ export default function ProjectPage() {
     }
   };
 
-  const handleRetryFailed = async (planId: string) => {
+  const handleRetryFailed = async (retryPlanId: string) => {
     try {
       const res = await fetch('/api/execute', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'retry_failed', projectId, planId }),
+        body: JSON.stringify({ action: 'retry_failed', projectId, planId: retryPlanId }),
       });
-      if (!res.ok) throw new Error('Retry failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        const msg = data?.error || 'Retry failed';
+        if (msg === 'No failed jobs to retry') {
+          toast.info('No failed jobs to retry — try Retry Synthesis instead');
+          return;
+        }
+        throw new Error(msg);
+      }
       toast.success('Retrying failed jobs...');
       await loadProject();
-    } catch {
-      toast.error('Failed to retry');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to retry');
     }
   };
 

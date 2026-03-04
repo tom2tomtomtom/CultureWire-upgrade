@@ -268,13 +268,17 @@ export async function POST(request: NextRequest) {
       });
 
       // ===== PASS 3: Strategic narrative =====
-      // Feed BOTH per-source analyses and cross-source synthesis for full evidence
+      // Feed cross-source synthesis + condensed per-source highlights (keep under context limits)
       console.log('[synthesize] Starting strategic narrative...');
       const perSourceSection = perSourceAnalyses
-        .map((a) => `### ${a.platform} Analysis\n\n${a.analysis}`)
+        .map((a) => {
+          // Take first 2000 chars of each per-source analysis to stay within limits
+          const trimmed = a.analysis.length > 2000 ? a.analysis.slice(0, 2000) + '\n\n[...truncated]' : a.analysis;
+          return `### ${a.platform}\n\n${trimmed}`;
+        })
         .join('\n\n---\n\n');
 
-      const strategicInput = `## Cross-Source Synthesis\n\n${crossSourceAnalysis}\n\n---\n\n## Per-Source Evidence\n\n${perSourceSection}`;
+      const strategicInput = `## Cross-Source Synthesis\n\n${crossSourceAnalysis}\n\n---\n\n## Per-Source Evidence (key sections)\n\n${perSourceSection}`;
 
       const strategicNarrative = await callClaude(
         buildStrategicNarrativePrompt(researchSpec),
@@ -298,7 +302,8 @@ export async function POST(request: NextRequest) {
 
       console.log('[synthesize] Complete!');
     } catch (err: unknown) {
-      console.error('[synthesize] Fatal error:', err);
+      const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+      console.error('[synthesize] Fatal error:', errMsg);
       await bgSupabase
         .from('projects')
         .update({ status: 'failed' })

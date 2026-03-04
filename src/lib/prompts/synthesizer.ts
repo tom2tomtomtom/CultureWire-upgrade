@@ -254,23 +254,28 @@ ADDITIONAL DIRECTIVES:
 - The Executive Summary is the most important section. A CEO should read only that and walk away informed.
 - Use --- horizontal rules between major sections for visual breathing room.
 - Recommendations must start with an action verb and include a timeline (immediate, short-term, long-term).
-- Every insight must trace back to specific platform evidence.
+- Every insight must trace back to specific platform evidence with the platform named.
 - Include comparison tables wherever you're contrasting items.
 - Think like a strategist, not a researcher. The reader wants to DECIDE, not just understand.
+- Use > blockquotes for the most powerful verbatim quotes from the data — one per section max, attributed.
+- When discussing battlegrounds or tensions, include Severity: X/10 in the text.
+- Be specific with numbers: "**23 of 156 posts**" not "many posts"; "**4.2/5 average**" not "mostly positive".
+- Name platforms when citing evidence: "Reddit users in r/fitness report X" or "TikTok creators with 2.3M combined views show Y".
 
 You will receive BOTH per-source analyses (with opportunity scores and tension analysis) AND the cross-source synthesis. Use the per-source analyses for evidence and quotes. Use the cross-source synthesis for the narrative thread.
 
 Write these sections (use ## headings):
 
-1. **Executive Summary** — 4-5 sentences. The headline finding, the biggest opportunity, and the key risk. A senior decision-maker should read ONLY this and walk away informed. Include one bold stat and one specific recommendation.
+1. **Executive Summary** — 5-7 sentences. The headline finding, the biggest opportunity, and the key risk. A senior decision-maker should read ONLY this and walk away informed. Include 2-3 bold stats, a specific recommendation, and name the platforms that support it. This section should be punchy, opinionated, and actionable.
 
 ---
 
 2. **Strike Zone — Act Now** — The top 3-5 highest-scoring opportunities across all platforms. For each:
-- Score and why it scored high
-- The specific data backing it up (with platform attribution)
+- Score and tier badge (STRIKE ZONE)
+- The specific data backing it up — name the platform, cite the number, quote the user
 - A concrete strategic recommendation: what to do, by when, and expected impact
 - Present as a numbered list with bold titles
+- Include at least one > blockquote from actual user content
 
 ---
 
@@ -280,21 +285,24 @@ Write these sections (use ## headings):
 
 4. **Cultural Battlegrounds** — The 2-4 most significant tensions in the data. For each:
 - Bold opinionated name
-- Severity (1-10) with reasoning
-- The opposing forces and where they show up
-- Strategic guidance: DO / DON'T table
+- Severity: X/10 (include this exact format so it renders as a visual badge)
+- The opposing viewpoints with evidence from specific platforms
+- For each side: a > blockquote capturing that viewpoint (real or representative)
+- Strategic guidance organized as:
+  - **DO:** bullets of safe, strategic actions
+  - **DON'T:** bullets of risks to avoid
 
 ---
 
-5. **Competitive Landscape** — Where the brand/product stands relative to competitors based on the data. Use a comparison table. Identify gaps competitors aren't filling.
+5. **Competitive Landscape** — Where the brand/product stands relative to competitors based on the data. Use a comparison table with at least 4 columns. Identify gaps competitors aren't filling. Include specific metrics from the data.
 
 ---
 
 6. **Audience Intelligence** — What the target audience actually says, thinks, and feels. Organize by:
-- What they love (with quotes)
-- What they hate (with quotes)
-- What they're confused about
-- What they wish existed (unmet needs)
+- **What they love** — with > blockquote from a real user + platform attribution
+- **What they hate** — with > blockquote from a real user + platform attribution
+- **What they're confused about** — specific questions they ask
+- **What they wish existed** — unmet needs with evidence
 
 ---
 
@@ -303,15 +311,15 @@ Write these sections (use ## headings):
 - **Short-term (2-4 weeks):** Opportunity-tier actions
 - **Long-term (1-3 months):** Structural moves and positioning
 
-Each starts with an action verb. Each ties back to a specific finding.
+Each starts with an action verb. Each ties back to a specific finding with platform attribution.
 
 ---
 
-8. **Risk Radar** — What could go wrong. Battleground risks, data limitations, market shifts to watch. Brief bullets.
+8. **Risk Radar** — What could go wrong. Battleground risks, data limitations, market shifts to watch. Brief bullets with severity indicators.
 
 ---
 
 9. **Monitor List** — Items scoring 50-64 that aren't actionable yet but should be tracked. Brief table with finding, platform, score, and trigger condition (what would make this actionable).
 
-Write for a senior decision-maker who wants to act, not just understand. Be direct, evidence-based, and specific. No filler. No hedging.`;
+Write for a senior decision-maker who wants to act, not just understand. Be direct, evidence-based, and specific. No filler. No hedging. Every paragraph should contain at least one specific data point.`;
 }
