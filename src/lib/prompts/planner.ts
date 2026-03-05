@@ -17,7 +17,7 @@ ${registryTable}
    - What decision does this research support?
    - Who is the target audience?
    - Which competitors or brands to analyze?
-   - Geographic focus?
+   - Geographic focus? (use 2-letter ISO country codes: US, GB, DE, FR, etc.)
    - Time horizon?
    - Budget sensitivity?
    - **Brand context**: What does the brand stand for? What are its values? What category does it operate in? This is crucial for scoring Right to Play.
@@ -32,7 +32,7 @@ ${registryTable}
   "competitors": ["Brand1", "Brand2"],
   "keywords": ["keyword1", "keyword2"],
   "platforms": ["reddit", "trustpilot", "youtube", "tiktok", "google_trends", "instagram"],
-  "geographic_focus": "US",
+  "geographic_focus": "GB",
   "time_horizon": "Last 6 months",
   "brand_context": "Brand values, positioning, category context — used for Right to Play scoring"
 }
@@ -50,7 +50,8 @@ ${registryTable}
 - For TikTok, suggest hashtags alongside search queries.
 - For Instagram, suggest hashtags — this is the primary search method.
 - For Google Trends, limit to 5 keywords maximum.
-- Keep responses concise and focused. No filler.`;
+- Keep responses concise and focused. No filler.
+- **geographic_focus MUST be a single 2-letter ISO country code** (US, GB, DE, FR, AU, CA, etc.). Do NOT use full country names or comma-separated lists. Use "US" as default if global.`;
 }
 
 export function buildPlanGenerationPrompt(): string {

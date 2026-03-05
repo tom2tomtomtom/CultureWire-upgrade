@@ -5,6 +5,54 @@ import { estimateActorCost } from '@/lib/cost';
 import type { Platform, PlannedActorRun, ResearchSpec } from '@/lib/types';
 
 // ============================================
+// GEO NORMALIZATION
+// ============================================
+// The planner AI may produce free-text like "UK (primary), Romania, ..."
+// but Apify actors need 2-letter ISO country codes.
+
+const COUNTRY_TO_ISO: Record<string, string> = {
+  'united states': 'US', 'usa': 'US', 'us': 'US', 'america': 'US',
+  'united kingdom': 'GB', 'uk': 'GB', 'gb': 'GB', 'britain': 'GB', 'england': 'GB',
+  'germany': 'DE', 'de': 'DE', 'france': 'FR', 'fr': 'FR',
+  'italy': 'IT', 'it': 'IT', 'spain': 'ES', 'es': 'ES',
+  'canada': 'CA', 'ca': 'CA', 'australia': 'AU', 'au': 'AU',
+  'brazil': 'BR', 'br': 'BR', 'india': 'IN', 'in': 'IN',
+  'japan': 'JP', 'jp': 'JP', 'china': 'CN', 'cn': 'CN',
+  'mexico': 'MX', 'mx': 'MX', 'south korea': 'KR', 'korea': 'KR',
+  'netherlands': 'NL', 'nl': 'NL', 'sweden': 'SE', 'se': 'SE',
+  'switzerland': 'CH', 'ch': 'CH', 'ireland': 'IE', 'ie': 'IE',
+  'poland': 'PL', 'pl': 'PL', 'romania': 'RO', 'ro': 'RO',
+  'serbia': 'RS', 'rs': 'RS', 'portugal': 'PT', 'pt': 'PT',
+  'belgium': 'BE', 'be': 'BE', 'austria': 'AT', 'at': 'AT',
+  'norway': 'NO', 'no': 'NO', 'denmark': 'DK', 'dk': 'DK',
+  'finland': 'FI', 'fi': 'FI', 'new zealand': 'NZ', 'nz': 'NZ',
+  'singapore': 'SG', 'sg': 'SG', 'south africa': 'ZA', 'za': 'ZA',
+  'uae': 'AE', 'united arab emirates': 'AE',
+  'global': '', 'worldwide': '',
+};
+
+function normalizeGeo(raw: string): string {
+  if (!raw) return 'US';
+  // Already a 2-letter code?
+  const trimmed = raw.trim().toUpperCase();
+  if (/^[A-Z]{2}$/.test(trimmed)) return trimmed;
+  // Try to extract the first recognizable country from a comma-separated or descriptive string
+  const lower = raw.toLowerCase();
+  // Remove parenthetical notes like "(primary)"
+  const cleaned = lower.replace(/\([^)]*\)/g, '');
+  // Split on commas and try each token
+  const tokens = cleaned.split(/[,;]/).map((t) => t.trim()).filter(Boolean);
+  for (const token of tokens) {
+    if (COUNTRY_TO_ISO[token] !== undefined) return COUNTRY_TO_ISO[token] || 'US';
+  }
+  // Try matching anywhere in the full string
+  for (const [name, code] of Object.entries(COUNTRY_TO_ISO)) {
+    if (name.length > 2 && lower.includes(name)) return code || 'US';
+  }
+  return 'US';
+}
+
+// ============================================
 // THREE-LAYER COLLECTION STRATEGY
 // ============================================
 // Layer 1 (Brand/Direct): Competitor-specific searches — what people say about specific brands
@@ -20,7 +68,7 @@ function buildLayeredRuns(
   const entry = ACTOR_REGISTRY[platform];
   if (!entry) return [];
 
-  const geo = spec.geographic_focus || 'US';
+  const geo = normalizeGeo(spec.geographic_focus || 'US');
   const timeRange = spec.time_horizon || 'last 6 months';
   const brands = spec.competitors;
   const keywords = spec.keywords;
