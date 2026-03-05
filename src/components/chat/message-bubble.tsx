@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '@/lib/types';
+import { stripSpecBlock } from './strip-spec-block';
 
 interface MessageBubbleProps {
   message: ChatMessage;
@@ -27,7 +28,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {message.content}
+              {stripSpecBlock(message.content)}
             </ReactMarkdown>
           </div>
         )}
