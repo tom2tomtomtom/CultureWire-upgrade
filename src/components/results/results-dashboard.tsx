@@ -24,10 +24,12 @@ function platformDisplayName(key: string): string {
 export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
+      setIsLoading(true);
       try {
         const [resultsRes, analysesRes] = await Promise.all([
           fetch(`/api/results?projectId=${projectId}`),
@@ -43,6 +45,8 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
         }
       } catch {
         // Show empty state on error
+      } finally {
+        setIsLoading(false);
       }
     }
     loadData();
@@ -141,7 +145,12 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
       </div>
 
       <TabsContent value="overview">
-        {strategicNarrative ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading results...</span>
+          </div>
+        ) : strategicNarrative ? (
           <StrategicSummary content={strategicNarrative.analysis_content} />
         ) : (
           <p className="py-8 text-center text-muted-foreground">
@@ -161,7 +170,12 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
       ))}
 
       <TabsContent value="cross-source">
-        {crossSource ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading results...</span>
+          </div>
+        ) : crossSource ? (
           <AnalysisSection
             title="Cross-Source Analysis"
             content={crossSource.analysis_content}
