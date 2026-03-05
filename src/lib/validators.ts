@@ -43,3 +43,14 @@ export const CancelExecutionSchema = z.discriminatedUnion('action', [
     planId: z.string().uuid(),
   }),
 ]);
+
+export const CreateCultureWireSearchSchema = z.object({
+  brandName: z.string().min(1).max(200),
+  geo: z.string().length(2).default('AU'),
+  timeWindowHours: z.number().min(1).max(168).default(24),
+  platforms: z.array(z.string()).min(1).max(6).default(['reddit', 'tiktok', 'youtube', 'instagram']),
+});
+
+export const TriggerAnalysisSchema = z.object({
+  searchId: z.string().uuid(),
+});

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update project with parsed text
-    const supabase = createServerClient();
+    const supabase = await createServerClient();
     const { error: updateError } = await supabase
       .from('projects')
       .update({

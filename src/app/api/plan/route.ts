@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'projectId required' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const { data: plan } = await supabase
     .from('execution_plans')
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'projectId required' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   // Load latest research spec
   const { data: spec, error: specError } = await supabase
@@ -329,7 +329,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'planId and action=approve required' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const { data: plan, error } = await supabase
     .from('execution_plans')

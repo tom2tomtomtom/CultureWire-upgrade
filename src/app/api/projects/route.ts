@@ -3,7 +3,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { CreateProjectSchema } from '@/lib/validators';
 
 export async function GET(request: NextRequest) {
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
@@ -35,15 +35,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
-  // For MVP, use a fixed user_id. In production, get from auth session.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { data: project, error } = await supabase
     .from('projects')
     .insert({
       title: parsed.data.title,
       description: parsed.data.description || null,
-      user_id: '00000000-0000-0000-0000-000000000000', // MVP placeholder
+      user_id: user.id,
       status: 'draft',
     })
     .select()
@@ -61,7 +65,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Project ID required' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const { error } = await supabase
     .from('projects')

@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   const { projectId } = await params;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   const [projectResult, jobsResult, analysisResult] = await Promise.all([
     supabase.from('projects').select('*').eq('id', projectId).single(),

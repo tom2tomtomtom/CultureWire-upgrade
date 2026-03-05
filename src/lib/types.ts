@@ -133,3 +133,94 @@ export interface ProjectStatusResponse {
   failedCount: number;
   analysis_results: { id: string; pass_type: string; source_platform: string | null; created_at: string }[];
 }
+
+// ============================================
+// CULTURE WIRE TYPES
+// ============================================
+
+export type CultureWireStatus = 'collecting' | 'analyzing' | 'complete' | 'failed';
+export type CultureWireLayer = 'brand' | 'category' | 'trending';
+export type CultureWireAnalysisType = 'opportunities' | 'tensions' | 'strategic_brief' | 'right_to_play';
+export type OpportunityTier = 'GOLD' | 'SILVER' | 'BRONZE';
+
+export interface CultureWireSearch {
+  id: string;
+  user_id: string;
+  brand_name: string;
+  brand_context: BrandContext | null;
+  geo: string;
+  time_window_hours: number;
+  platforms: string[];
+  status: CultureWireStatus;
+  result_summary: ResultSummary | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface BrandContext {
+  category: string;
+  subcategory: string;
+  brand_values: string[];
+  brand_pillars: string[];
+  tone: string;
+  competitors: string[];
+  keywords: {
+    brand: string[];
+    category: string[];
+    trending: string[];
+  };
+}
+
+export interface ResultSummary {
+  total_items: number;
+  by_platform: Record<string, number>;
+  by_layer: Record<string, number>;
+  top_opportunities: number;
+  analysis_complete: boolean;
+}
+
+export interface CultureWireResult {
+  id: string;
+  search_id: string;
+  source_platform: string;
+  layer: CultureWireLayer;
+  raw_data: Record<string, unknown>[];
+  item_count: number;
+  created_at: string;
+}
+
+export interface CultureWireAnalysis {
+  id: string;
+  search_id: string;
+  analysis_type: CultureWireAnalysisType;
+  content: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ScoredOpportunity {
+  title: string;
+  description: string;
+  tier: OpportunityTier;
+  score: number;
+  platform: string;
+  layer: CultureWireLayer;
+  components: {
+    engagement: number;
+    velocity: number;
+    sentiment: number;
+    cultural_relevance: number;
+    brand_fit: number;
+  };
+  right_to_play: 'GREEN' | 'YELLOW' | 'RED';
+  evidence: string[];
+  url: string | null;
+}
+
+export interface CulturalTension {
+  name: string;
+  description: string;
+  severity: number;
+  platforms: string[];
+  evidence: string[];
+  brand_implication: string;
+}

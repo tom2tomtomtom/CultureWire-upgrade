@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: 'projectId required' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { data: messages } = await supabase
     .from('chat_messages')
     .select('*')
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { projectId, message } = parsed.data;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const anthropic = getAnthropicClient();
 
   // Save user message

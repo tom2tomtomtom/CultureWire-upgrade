@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { getAnthropicClient } from '@/lib/anthropic';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 import { SynthesizeRequestSchema } from '@/lib/validators';
 import {
   buildPerSourcePrompt,
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { projectId } = parsed.data;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   // Validate spec and results exist before committing
   const { data: spec } = await supabase
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
 
   // Return immediately — synthesis runs in the background
   after(async () => {
-    const bgSupabase = createServerClient();
+    const bgSupabase = createAdminClient();
 
     try {
       const researchSpec = spec as ResearchSpec;

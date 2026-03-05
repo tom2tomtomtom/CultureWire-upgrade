@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect } from '@/lib/apify';
 import { ExecuteRequestSchema, CancelExecutionSchema } from '@/lib/validators';
 import type { PlannedActorRun, ScrapeJob } from '@/lib/types';
 
 async function processJob(jobId: string, projectId: string, runId: string, platform: string) {
-  const supabase = createServerClient();
+  const supabase = createAdminClient();
   try {
     const run = await pollRunToCompletion(runId, 300_000);
     const items = await getDatasetItems(run.defaultDatasetId);
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { projectId, planId } = parsed.data;
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
 
   // Load plan
   const { data: plan, error: planError } = await supabase
@@ -166,6 +166,7 @@ export async function POST(request: NextRequest) {
 
   // Background polling for running jobs
   after(async () => {
+    const adminClient = createAdminClient();
     const runningJobs = jobs.filter((j) => j.status === 'running' && j.apify_run_id);
     await Promise.allSettled(
       runningJobs.map((j) =>
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Check if all complete
-    const { data: allJobs } = await supabase
+    const { data: allJobs } = await adminClient
       .from('scrape_jobs')
       .select('status')
       .eq('plan_id', planId);
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest) {
         (j) => j.status === 'succeeded' || j.status === 'failed' || j.status === 'timeout'
       );
       if (allDone) {
-        await supabase
+        await adminClient
           .from('execution_plans')
           .update({ status: 'complete' })
           .eq('id', planId);
@@ -203,7 +204,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = createServerClient();
+  const supabase = await createServerClient();
   const { action } = parsed.data;
 
   if (action === 'cancel') {
