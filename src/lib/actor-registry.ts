@@ -94,7 +94,7 @@ const GoogleTrendsInputSchema = z.object({
 // REGISTRY
 // ============================================
 
-export const ACTOR_REGISTRY: Record<Platform, ActorRegistryEntry> = {
+export const ACTOR_REGISTRY: Record<string, ActorRegistryEntry> = {
   reddit: {
     id: 'reddit-direct-api',
     platform: 'reddit',
@@ -246,6 +246,96 @@ export const ACTOR_REGISTRY: Record<Platform, ActorRegistryEntry> = {
     costProfile: { model: 'pay_per_result', estimatedCostPer100: 23 },
     defaults: { maxResults: 100, timeout: 300 },
   },
+};
+
+const TwitterInputSchema = z.object({
+  searchTerms: z.array(z.string()).min(1),
+  maxItems: z.number().min(1).max(500).default(100),
+  sort: z.enum(['Latest', 'Top']).default('Top'),
+});
+
+const LinkedInInputSchema = z.object({
+  searchUrl: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+  maxItems: z.number().min(1).max(200).default(50),
+});
+
+const FacebookInputSchema = z.object({
+  searchTerms: z.array(z.string()).min(1),
+  maxItems: z.number().min(1).max(200).default(50),
+});
+
+const NewsInputSchema = z.object({
+  keywords: z.array(z.string()).min(1),
+  language: z.string().default('en'),
+  pageSize: z.number().min(1).max(100).default(20),
+});
+
+// Extended platforms (Phase 3)
+ACTOR_REGISTRY.twitter = {
+  id: 'apidojo/twitter-scraper-v2',
+  platform: 'twitter' as Platform,
+  displayName: 'Twitter/X',
+  description: 'Search Twitter/X posts. Best for real-time conversation and trending topics.',
+  useCases: ['Real-time conversation tracking', 'Trending topic analysis', 'Brand mention monitoring', 'Public sentiment on current events'],
+  inputSchema: TwitterInputSchema,
+  buildInput: (params) => ({
+    searchTerms: params.keywords.slice(0, 5),
+    maxItems: Math.min(params.maxResults, 200),
+    sort: 'Top',
+  }),
+  extractFields: ['text', 'createdAt', 'user', 'replyCount', 'retweetCount', 'likeCount', 'viewCount', 'url'],
+  costProfile: { model: 'pay_per_result', estimatedCostPer100: 15 },
+  defaults: { maxResults: 100, timeout: 180 },
+};
+
+ACTOR_REGISTRY.linkedin = {
+  id: 'anchor/linkedin-scraper',
+  platform: 'linkedin' as Platform,
+  displayName: 'LinkedIn',
+  description: 'Search LinkedIn posts and articles. Best for B2B insights and professional sentiment.',
+  useCases: ['B2B brand sentiment', 'Professional discourse analysis', 'Industry thought leadership tracking', 'Corporate reputation monitoring'],
+  inputSchema: LinkedInInputSchema,
+  buildInput: (params) => ({
+    keywords: params.keywords.slice(0, 3),
+    maxItems: Math.min(params.maxResults, 100),
+  }),
+  extractFields: ['text', 'authorName', 'authorHeadline', 'likeCount', 'commentCount', 'shareCount', 'postedAt', 'url'],
+  costProfile: { model: 'pay_per_result', estimatedCostPer100: 25 },
+  defaults: { maxResults: 50, timeout: 180 },
+};
+
+ACTOR_REGISTRY.facebook = {
+  id: 'apify/facebook-posts-scraper',
+  platform: 'facebook' as Platform,
+  displayName: 'Facebook',
+  description: 'Search Facebook posts. Best for community insights and older demographics.',
+  useCases: ['Community group insights', 'Brand page engagement', 'Older demographic sentiment', 'Local community trends'],
+  inputSchema: FacebookInputSchema,
+  buildInput: (params) => ({
+    searchTerms: params.keywords.slice(0, 5),
+    maxItems: Math.min(params.maxResults, 100),
+  }),
+  extractFields: ['text', 'authorName', 'likes', 'comments', 'shares', 'timestamp', 'url'],
+  costProfile: { model: 'pay_per_result', estimatedCostPer100: 15 },
+  defaults: { maxResults: 50, timeout: 180 },
+};
+
+ACTOR_REGISTRY.news = {
+  id: 'news-api-direct',
+  platform: 'news' as Platform,
+  displayName: 'News',
+  description: 'Search news articles via NewsAPI. Best for mainstream media coverage and press mentions.',
+  useCases: ['Press coverage monitoring', 'Industry news tracking', 'Crisis monitoring', 'Competitor news analysis'],
+  inputSchema: NewsInputSchema,
+  buildInput: (params) => ({
+    keywords: params.keywords.slice(0, 5),
+    language: 'en',
+    pageSize: Math.min(params.maxResults, 100),
+  }),
+  extractFields: ['title', 'description', 'content', 'author', 'source', 'publishedAt', 'url', 'urlToImage'],
+  costProfile: { model: 'free', estimatedCostPer100: 0 },
+  defaults: { maxResults: 20, timeout: 30 },
 };
 
 export function getActorsForPlatforms(platforms: Platform[]): ActorRegistryEntry[] {

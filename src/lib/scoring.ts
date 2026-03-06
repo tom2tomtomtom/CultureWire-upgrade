@@ -210,6 +210,14 @@ export function scoreItems(
       return scoreInstagram(normalized);
     case 'trustpilot':
       return scoreTrustpilot(normalized);
+    case 'twitter':
+      return scoreTwitter(normalized);
+    case 'linkedin':
+      return scoreLinkedIn(normalized);
+    case 'facebook':
+      return scoreFacebook(normalized);
+    case 'news':
+      return scoreNews(normalized);
     default:
       return normalized.map((item) => ({
         ...item,
@@ -223,6 +231,123 @@ export function scoreItems(
         _platform_metric: null,
       }));
   }
+}
+
+function scoreTwitter(items: Record<string, unknown>[]): ScoredItem[] {
+  const likes = items.map((i) => num(i.likeCount || i.favoriteCount || 0));
+  const retweets = items.map((i) => num(i.retweetCount || 0));
+
+  return items.map((item, idx) => {
+    const likeCount = likes[idx];
+    const retweetCount = retweets[idx];
+    const replyCount = num(item.replyCount || 0);
+    const viewCount = num(item.viewCount || 0);
+
+    const likeP = percentile(likeCount, likes);
+    const rtP = percentile(retweetCount, retweets);
+    const viralBonus = viewCount > 100000 ? 10 : 0;
+
+    const engScore = clamp(likeP * 0.35 + rtP * 0.35 + viralBonus + 15, 0, 100);
+
+    const user = item.user as Record<string, unknown> | undefined;
+    const creator = user?.username || user?.screen_name || item.authorName;
+
+    return {
+      ...item,
+      _score: Math.round(engScore),
+      _tier: tierLabel(engScore),
+      _url: String(item.url || '') || null,
+      _thumbnail: null,
+      _creator: creator ? `@${creator}` : null,
+      _title: String(item.text || item.fullText || '').slice(0, 120) || null,
+      _engagement_rate: viewCount > 0 ? Math.round(((likeCount + retweetCount) / viewCount) * 10000) / 100 : null,
+      _platform_metric: `${formatNum(likeCount)} likes · ${formatNum(retweetCount)} RTs`,
+    };
+  });
+}
+
+function scoreLinkedIn(items: Record<string, unknown>[]): ScoredItem[] {
+  const likes = items.map((i) => num(i.likeCount || i.likes || 0));
+
+  return items.map((item, idx) => {
+    const likeCount = likes[idx];
+    const commentCount = num(item.commentCount || item.comments || 0);
+    const shareCount = num(item.shareCount || item.shares || 0);
+
+    const likeP = percentile(likeCount, likes);
+    const commentBonus = clamp(commentCount * 2, 0, 20);
+    const shareBonus = clamp(shareCount * 3, 0, 15);
+
+    const engScore = clamp(likeP * 0.4 + commentBonus + shareBonus + 15, 0, 100);
+
+    return {
+      ...item,
+      _score: Math.round(engScore),
+      _tier: tierLabel(engScore),
+      _url: String(item.url || '') || null,
+      _thumbnail: null,
+      _creator: String(item.authorName || item.author || '') || null,
+      _title: String(item.text || item.content || '').slice(0, 120) || null,
+      _engagement_rate: null,
+      _platform_metric: `${formatNum(likeCount)} likes · ${formatNum(commentCount)} comments`,
+    };
+  });
+}
+
+function scoreFacebook(items: Record<string, unknown>[]): ScoredItem[] {
+  const likes = items.map((i) => num(i.likes || i.likeCount || 0));
+
+  return items.map((item, idx) => {
+    const likeCount = likes[idx];
+    const commentCount = num(item.comments || item.commentCount || 0);
+    const shareCount = num(item.shares || item.shareCount || 0);
+
+    const likeP = percentile(likeCount, likes);
+    const commentBonus = clamp(commentCount * 1.5, 0, 20);
+    const shareBonus = clamp(shareCount * 2, 0, 15);
+
+    const engScore = clamp(likeP * 0.4 + commentBonus + shareBonus + 15, 0, 100);
+
+    return {
+      ...item,
+      _score: Math.round(engScore),
+      _tier: tierLabel(engScore),
+      _url: String(item.url || '') || null,
+      _thumbnail: null,
+      _creator: String(item.authorName || item.pageName || '') || null,
+      _title: String(item.text || item.message || '').slice(0, 120) || null,
+      _engagement_rate: null,
+      _platform_metric: `${formatNum(likeCount)} likes · ${formatNum(shareCount)} shares`,
+    };
+  });
+}
+
+function scoreNews(items: Record<string, unknown>[]): ScoredItem[] {
+  return items.map((item) => {
+    const titleLength = String(item.title || '').length;
+    const hasImage = Boolean(item.urlToImage);
+    const contentLength = String(item.content || item.description || '').length;
+
+    // News scoring: recency + content quality proxy
+    const lengthScore = clamp(contentLength / 20, 0, 30);
+    const titleScore = clamp(titleLength / 5, 0, 20);
+    const imageBonus = hasImage ? 10 : 0;
+    const sourceBonus = item.source ? 15 : 0;
+
+    const engScore = clamp(lengthScore + titleScore + imageBonus + sourceBonus + 10, 0, 100);
+
+    return {
+      ...item,
+      _score: Math.round(engScore),
+      _tier: tierLabel(engScore),
+      _url: String(item.url || '') || null,
+      _thumbnail: String(item.urlToImage || '') || null,
+      _creator: String(item.source || item.author || '') || null,
+      _title: String(item.title || '').slice(0, 120) || null,
+      _engagement_rate: null,
+      _platform_metric: String(item.source || ''),
+    };
+  });
 }
 
 function scoreReddit(items: Record<string, unknown>[]): ScoredItem[] {

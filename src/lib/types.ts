@@ -3,7 +3,7 @@
 // ============================================
 
 export type ProjectStatus = 'draft' | 'planning' | 'executing' | 'synthesizing' | 'complete' | 'failed';
-export type Platform = 'reddit' | 'trustpilot' | 'youtube' | 'tiktok' | 'google_trends' | 'instagram';
+export type Platform = 'reddit' | 'trustpilot' | 'youtube' | 'tiktok' | 'google_trends' | 'instagram' | 'twitter' | 'linkedin' | 'facebook' | 'news';
 
 export interface Project {
   id: string;
@@ -143,11 +143,15 @@ export type CultureWireLayer = 'brand' | 'category' | 'trending';
 export type CultureWireAnalysisType = 'opportunities' | 'tensions' | 'strategic_brief' | 'right_to_play';
 export type OpportunityTier = 'GOLD' | 'SILVER' | 'BRONZE';
 
+export type CultureWireSearchType = 'brand' | 'category';
+
 export interface CultureWireSearch {
   id: string;
   user_id: string;
   brand_name: string;
   brand_context: BrandContext | null;
+  search_type: CultureWireSearchType;
+  category_slug: string | null;
   geo: string;
   time_window_hours: number;
   platforms: string[];
@@ -155,6 +159,40 @@ export interface CultureWireSearch {
   result_summary: ResultSummary | null;
   created_at: string;
   completed_at: string | null;
+}
+
+export interface SignupRequest {
+  id: string;
+  email: string;
+  full_name: string | null;
+  company: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeadInfluencer {
+  id: string;
+  name: string;
+  handle: string;
+  platform: string;
+  category: string;
+  tier: 'curated' | 'discovered_au' | 'global';
+  followers: number | null;
+  engagement_rate: number | null;
+  geo: string | null;
+  added_by: string | null;
+  created_at: string;
+}
+
+export interface CultureWireSupplementary {
+  id: string;
+  search_id: string;
+  scan_type: 'reddit_threads' | 'google_trends' | 'news';
+  raw_data: Record<string, unknown>;
+  item_count: number;
+  created_at: string;
 }
 
 export interface BrandContext {

@@ -1,12 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { OpportunityCard } from './opportunity-card';
+import { ExportMenu } from './export-menu';
 import { Badge } from '@/components/ui/badge';
+import { Loader2, Microscope } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
 import type {
   CultureWireSearch,
   CultureWireResult,
@@ -22,6 +26,24 @@ interface ResultsViewProps {
 }
 
 export function ResultsView({ search, results, analyses }: ResultsViewProps) {
+  const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+
+  async function handleDeepDive() {
+    setDeepDiveLoading(true);
+    try {
+      const res = await fetch(`/api/culture-wire/${search.id}/supplementary`, { method: 'POST' });
+      if (res.ok) {
+        toast.success('Deep dive scan started. Results will appear shortly.');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Failed to start deep dive');
+      }
+    } catch {
+      toast.error('Network error');
+    } finally {
+      setDeepDiveLoading(false);
+    }
+  }
   const opportunities = useMemo(() => {
     const analysis = analyses.find((a) => a.analysis_type === 'opportunities');
     if (!analysis) return [];
@@ -49,6 +71,23 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Action bar */}
+      <div className="flex items-center gap-2">
+        <ExportMenu searchId={search.id} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDeepDive}
+          disabled={deepDiveLoading || search.status !== 'complete'}
+        >
+          {deepDiveLoading ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Starting...</>
+          ) : (
+            <><Microscope className="mr-2 h-4 w-4" />Deep Dive</>
+          )}
+        </Button>
+      </div>
+
       {/* Summary stats */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <StatCard label="Items Collected" value={totalItems} />

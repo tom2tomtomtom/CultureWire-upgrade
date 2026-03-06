@@ -48,7 +48,9 @@ export const CreateCultureWireSearchSchema = z.object({
   brandName: z.string().min(1).max(200),
   geo: z.string().length(2).default('AU'),
   timeWindowHours: z.number().min(1).max(168).default(24),
-  platforms: z.array(z.string()).min(1).max(6).default(['reddit', 'tiktok', 'youtube', 'instagram']),
+  platforms: z.array(z.string()).min(1).max(10).default(['reddit', 'tiktok', 'youtube', 'instagram']),
+  searchType: z.enum(['brand', 'category']).default('brand'),
+  categorySlug: z.string().optional(),
 });
 
 export const TriggerAnalysisSchema = z.object({

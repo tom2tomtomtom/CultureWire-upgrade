@@ -1,7 +1,8 @@
 import { ACTOR_REGISTRY, type PlannerParams } from '@/lib/actor-registry';
-import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect } from '@/lib/apify';
+import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect, collectNewsArticles } from '@/lib/apify';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { BrandContext, CultureWireLayer, Platform } from '@/lib/types';
+import type { CategoryConfig } from './categories';
 
 interface CollectionResult {
   platform: string;
@@ -48,6 +49,10 @@ async function collectFromPlatform(
 
   if (platform === 'reddit') {
     return scrapeRedditDirect(input);
+  }
+
+  if (platform === ('news' as Platform)) {
+    return collectNewsArticles(input);
   }
 
   const { runId } = await startActorRun(registry.id, input);
@@ -132,6 +137,97 @@ export async function runThreeLayerCollection(
       if (result.status === 'fulfilled') {
         results.push(result.value);
       }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Run collection using category keywords instead of brand context.
+ * Uses the category's keyword list split across layers.
+ */
+export async function runCategoryCollection(
+  searchId: string,
+  category: CategoryConfig,
+  platforms: string[],
+  maxResultsPerLayer: number = 50
+): Promise<CollectionResult[]> {
+  const supabase = createAdminClient();
+  const geo = category.geo_scope === 'au' ? 'AU' : 'US';
+  const validPlatforms = platforms.filter((p) => p in ACTOR_REGISTRY) as Platform[];
+
+  // Split keywords across layers
+  const third = Math.ceil(category.keywords.length / 3);
+  const keywordSets: Record<CultureWireLayer, string[]> = {
+    brand: category.keywords.slice(0, third),
+    category: category.keywords.slice(third, third * 2),
+    trending: category.keywords.slice(third * 2),
+  };
+
+  const tasks: { platform: Platform; layer: CultureWireLayer; params: PlannerParams }[] = [];
+  const layers: CultureWireLayer[] = ['brand', 'category', 'trending'];
+
+  for (const platform of validPlatforms) {
+    for (const layer of layers) {
+      if (platform === 'google_trends' && layer === 'brand') continue;
+      if (platform === 'trustpilot') continue; // Trustpilot not useful for categories
+
+      const keywords = keywordSets[layer];
+      if (keywords.length === 0) continue;
+
+      tasks.push({
+        platform,
+        layer,
+        params: {
+          keywords,
+          brands: [],
+          subreddits: [],
+          hashtags: keywords.slice(0, 3),
+          urls: [],
+          geo,
+          timeRange: 'month',
+          maxResults: maxResultsPerLayer,
+        },
+      });
+    }
+  }
+
+  const CONCURRENCY = 4;
+  const results: CollectionResult[] = [];
+
+  for (let i = 0; i < tasks.length; i += CONCURRENCY) {
+    const batch = tasks.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.allSettled(
+      batch.map(async (task) => {
+        try {
+          const items = await collectFromPlatform(task.platform, task.layer, task.params);
+
+          await supabase.from('culture_wire_results').insert({
+            search_id: searchId,
+            source_platform: task.platform,
+            layer: task.layer,
+            raw_data: items,
+            item_count: items.length,
+          });
+
+          return { platform: task.platform, layer: task.layer, items, itemCount: items.length };
+        } catch (error) {
+          console.error(`[category] ${task.platform}/${task.layer} failed:`, error);
+          await supabase.from('culture_wire_results').insert({
+            search_id: searchId,
+            source_platform: task.platform,
+            layer: task.layer,
+            raw_data: [],
+            item_count: 0,
+          });
+          return { platform: task.platform, layer: task.layer, items: [], itemCount: 0 };
+        }
+      })
+    );
+
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') results.push(result.value);
     }
   }
 

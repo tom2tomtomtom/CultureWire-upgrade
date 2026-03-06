@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth/session';
 import { CreateCultureWireSearchSchema } from '@/lib/validators';
 import { generateBrandContext } from '@/lib/culture-wire/brand-context';
 import { runThreeLayerCollection } from '@/lib/culture-wire/collector';
@@ -25,20 +26,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = await createServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const supabase = await createServerClient();
   const { brandName, geo, timeWindowHours, platforms } = parsed.data;
 
   // Create search record
   const { data: search, error } = await supabase
     .from('culture_wire_searches')
     .insert({
-      user_id: user.id,
+      user_id: session.sub,
       brand_name: brandName,
       geo,
       time_window_hours: timeWindowHours,

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Zap } from 'lucide-react';
 import type { CultureWireSearch } from '@/lib/types';
 
-const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram'] as const;
+const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram', 'twitter', 'linkedin', 'facebook', 'news'] as const;
 const GEOS = [
   { code: 'AU', label: 'Australia' },
   { code: 'US', label: 'United States' },

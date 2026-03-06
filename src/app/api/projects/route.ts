@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth/session';
 import { CreateProjectSchema } from '@/lib/validators';
 
 export async function GET(request: NextRequest) {
@@ -35,19 +36,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const supabase = await createServerClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const supabase = await createServerClient();
 
   const { data: project, error } = await supabase
     .from('projects')
     .insert({
       title: parsed.data.title,
       description: parsed.data.description || null,
-      user_id: user.id,
+      user_id: session.sub,
       status: 'draft',
     })
     .select()

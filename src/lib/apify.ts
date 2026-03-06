@@ -85,6 +85,45 @@ export async function scrapeRedditDirect(
   return allResults.slice(0, maxItems);
 }
 
+// ============================================
+// NEWS API COLLECTION (no Apify needed)
+// ============================================
+
+export async function collectNewsArticles(
+  input: Record<string, unknown>
+): Promise<Record<string, unknown>[]> {
+  const apiKey = process.env.NEWS_API_KEY;
+  if (!apiKey) {
+    console.warn('[news] NEWS_API_KEY not configured, skipping');
+    return [];
+  }
+
+  const keywords = (input.keywords as string[]) || [];
+  const pageSize = (input.pageSize as number) || 20;
+  const query = keywords.slice(0, 3).join(' OR ');
+
+  const res = await fetch(
+    `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=${pageSize}&apiKey=${apiKey}`
+  );
+
+  if (!res.ok) {
+    console.error(`[news] NewsAPI failed: ${res.status}`);
+    return [];
+  }
+
+  const data = await res.json();
+  return (data.articles || []).map((article: Record<string, unknown>) => ({
+    title: article.title,
+    description: article.description,
+    content: article.content,
+    author: article.author,
+    source: (article.source as Record<string, unknown>)?.name || '',
+    publishedAt: article.publishedAt,
+    url: article.url,
+    urlToImage: article.urlToImage,
+  }));
+}
+
 interface ApifyRunResult {
   id: string;
   status: string;

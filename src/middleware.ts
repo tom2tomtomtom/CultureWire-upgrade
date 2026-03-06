@@ -1,53 +1,46 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { verifyGatewayJWT } from '@/lib/gateway-jwt';
 
-const PUBLIC_ROUTES = ['/login', '/auth/callback'];
+const GATEWAY_URL = process.env.GATEWAY_URL || 'https://aiden.services';
+
+const PUBLIC_ROUTES = ['/api/auth', '/_next', '/favicon.ico'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes and static assets
-  if (
-    PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/auth') ||
-    pathname.includes('.')
-  ) {
+  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) || pathname.includes('.')) {
     return NextResponse.next();
   }
 
-  let response = NextResponse.next({ request });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            response = NextResponse.next({ request });
-            response.cookies.set(name, value, options);
-          });
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('redirectTo', pathname);
-    return NextResponse.redirect(loginUrl);
+  // Tier 1: Check Gateway JWT cookie (~2ms)
+  const token = request.cookies.get('aiden-gw')?.value;
+  if (token) {
+    const user = await verifyGatewayJWT(token);
+    if (user) return NextResponse.next();
   }
 
-  return response;
+  // Tier 2: Try Gateway session endpoint (forwards sb-* cookies)
+  try {
+    const sessionRes = await fetch(`${GATEWAY_URL}/api/auth/session`, {
+      headers: { cookie: request.headers.get('cookie') || '' },
+    });
+    if (sessionRes.ok) {
+      const response = NextResponse.next();
+      // Forward any set-cookie headers from Gateway (new JWT)
+      const setCookie = sessionRes.headers.getSetCookie();
+      for (const cookie of setCookie) {
+        response.headers.append('set-cookie', cookie);
+      }
+      return response;
+    }
+  } catch {
+    // Gateway unreachable, fall through to redirect
+  }
+
+  // Tier 3: Redirect to Gateway login
+  const currentUrl = request.nextUrl.toString();
+  const loginUrl = `${GATEWAY_URL}/login?redirectTo=${encodeURIComponent(currentUrl)}`;
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

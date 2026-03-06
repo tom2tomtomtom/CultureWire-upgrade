@@ -2,6 +2,9 @@ import { getAnthropicClient } from '@/lib/anthropic';
 import { scoreItems, normalizeItems, buildScoredItemsSummary } from '@/lib/scoring';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildOpportunityAnalysisPrompt, buildTensionDetectionPrompt, buildStrategicBriefPrompt } from './prompts';
+import { enrichTopResults } from './perplexity';
+import { getGeoBoost } from './geo-config';
+import { buildRTPAnalysisPrompt } from './right-to-play';
 import type { BrandContext, CultureWireResult, ScoredOpportunity, CulturalTension } from '@/lib/types';
 
 const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
@@ -33,10 +36,9 @@ async function callClaude(system: string, userContent: string, maxTokens = 8192)
   throw new Error('All models failed');
 }
 
-function buildDataPayload(results: CultureWireResult[]): string {
+function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean = false): string {
   const sections: string[] = [];
 
-  // Group by platform then layer
   const byPlatform = new Map<string, CultureWireResult[]>();
   for (const r of results) {
     const existing = byPlatform.get(r.source_platform) || [];
@@ -47,7 +49,22 @@ function buildDataPayload(results: CultureWireResult[]): string {
   for (const [platform, platformResults] of byPlatform) {
     const allItems = platformResults.flatMap((r) => r.raw_data);
     const normalized = normalizeItems(platform, allItems);
-    const scored = scoreItems(platform, normalized);
+    let scored = scoreItems(platform, normalized);
+
+    // Apply geo boost if enabled (Phase 6)
+    if (applyGeoBoost) {
+      scored = scored.map((item) => {
+        const content = String(item._title || '') + ' ' + String(item.text || item.body || item.caption || '');
+        const url = String(item._url || item.url || '');
+        const boost = getGeoBoost(content, url);
+        if (boost > 1.0) {
+          const boostedScore = Math.min(100, Math.round(item._score * boost));
+          return { ...item, _score: boostedScore, _tier: tierLabel(boostedScore), _geo_boosted: true };
+        }
+        return item;
+      });
+    }
+
     const summary = buildScoredItemsSummary(platform, scored);
 
     const byLayer = new Map<string, CultureWireResult[]>();
@@ -66,7 +83,6 @@ function buildDataPayload(results: CultureWireResult[]): string {
 
     sections.push(`## ${platform} (${allItems.length} total items)\n${layerBreakdown}\n${summary}`);
 
-    // Include top 50 items per platform (truncated)
     const topItems = scored
       .sort((a, b) => b._score - a._score)
       .slice(0, 50)
@@ -89,6 +105,13 @@ function buildDataPayload(results: CultureWireResult[]): string {
   }
 
   return sections.join('\n\n---\n\n');
+}
+
+function tierLabel(score: number): string {
+  if (score >= 80) return 'STRIKE ZONE';
+  if (score >= 65) return 'OPPORTUNITY';
+  if (score >= 50) return 'MONITOR';
+  return 'SKIP';
 }
 
 function parseJSON<T>(text: string): T {
@@ -120,17 +143,51 @@ export async function runAnalysisPipeline(
     throw new Error('No results found for analysis');
   }
 
-  const dataPayload = buildDataPayload(results as CultureWireResult[]);
+  // Apply geo boost for AU searches
+  const dataPayload = buildDataPayload(results as CultureWireResult[], true);
+
+  // Perplexity enrichment: enrich top opportunities before Claude analysis
+  let perplexityContext = '';
+  try {
+    if (process.env.PERPLEXITY_API_KEY) {
+      // Extract top trending items for enrichment
+      const topItems = (results as CultureWireResult[])
+        .flatMap((r) => {
+          const items = r.raw_data as Record<string, unknown>[];
+          return items.map((item) => ({
+            title: String(item.title || item.text || item.caption || '').slice(0, 200),
+            description: String(item.body || item.description || '').slice(0, 300),
+            platform: r.source_platform,
+          }));
+        })
+        .filter((item) => item.title.length > 10)
+        .slice(0, 5);
+
+      if (topItems.length > 0) {
+        const enrichments = await enrichTopResults(topItems, 3);
+        if (enrichments.size > 0) {
+          perplexityContext = '\n\n## REAL-TIME CONTEXT (Perplexity Enrichment)\n';
+          for (const [title, enrichment] of enrichments) {
+            perplexityContext += `\n### ${title}\n${enrichment.context}\nSources: ${enrichment.sources.join(', ')}\n`;
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[analyzer] Perplexity enrichment failed (non-fatal):', err);
+  }
+
+  const enrichedPayload = dataPayload + perplexityContext;
 
   // Run opportunity scoring and tension detection in parallel
   const [opportunitiesRaw, tensionsRaw] = await Promise.all([
     callClaude(
       buildOpportunityAnalysisPrompt(brandName, context),
-      dataPayload
+      enrichedPayload
     ),
     callClaude(
       buildTensionDetectionPrompt(brandName, context),
-      dataPayload
+      enrichedPayload
     ),
   ]);
 
@@ -151,8 +208,28 @@ export async function runAnalysisPipeline(
     }),
   ]);
 
+  // Run Right to Play analysis (Phase 6)
+  try {
+    const rtpPrompt = buildRTPAnalysisPrompt(brandName, {
+      category: context.category,
+      brand_values: context.brand_values,
+      tone: context.tone,
+    });
+    const rtpInput = `Brand: ${brandName}\n\nOpportunities to assess:\n${JSON.stringify(opportunities.slice(0, 10), null, 2)}`;
+    const rtpRaw = await callClaude(rtpPrompt, rtpInput);
+    const rtpAssessments = parseJSON<Record<string, unknown>[]>(rtpRaw);
+
+    await supabase.from('culture_wire_analyses').insert({
+      search_id: searchId,
+      analysis_type: 'right_to_play',
+      content: { assessments: rtpAssessments },
+    });
+  } catch (err) {
+    console.warn('[analyzer] RTP analysis failed (non-fatal):', err);
+  }
+
   // Run strategic brief (depends on opportunities + tensions)
-  const briefInput = `${dataPayload}\n\n---\n\n## IDENTIFIED OPPORTUNITIES\n${JSON.stringify(opportunities, null, 2)}\n\n## IDENTIFIED TENSIONS\n${JSON.stringify(tensions, null, 2)}`;
+  const briefInput = `${enrichedPayload}\n\n---\n\n## IDENTIFIED OPPORTUNITIES\n${JSON.stringify(opportunities, null, 2)}\n\n## IDENTIFIED TENSIONS\n${JSON.stringify(tensions, null, 2)}`;
 
   const strategicBrief = await callClaude(
     buildStrategicBriefPrompt(brandName, context),

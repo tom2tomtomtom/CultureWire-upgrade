@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { NavHeader } from '@/components/layout/nav-header';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { getSession } from '@/lib/auth/session';
 import './globals.css';
 
 const inter = Inter({
@@ -12,21 +13,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Research Agent',
-  description: 'AI-powered research intelligence tool',
+  title: 'CultureWire',
+  description: 'AI-powered cultural intelligence platform',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getSession();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider>
           <TooltipProvider>
-            <NavHeader />
+            <NavHeader email={session?.email ?? null} />
             <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
             <Toaster richColors position="bottom-right" />
           </TooltipProvider>
