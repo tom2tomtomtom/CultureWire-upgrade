@@ -26,22 +26,6 @@ export default function CultureWireDetailPage() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
 
-  async function handleCancel() {
-    setCancelling(true);
-    try {
-      await fetch(`/api/culture-wire/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel' }),
-      });
-      await fetchData();
-    } catch {
-      // ignore
-    } finally {
-      setCancelling(false);
-    }
-  }
-
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/culture-wire/${id}`);
@@ -55,6 +39,25 @@ export default function CultureWireDetailPage() {
       setLoading(false);
     }
   }, [id]);
+
+  async function handleCancel() {
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/culture-wire/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      if (!res.ok) {
+        console.error('Cancel failed:', await res.text());
+      }
+      await fetchData();
+    } catch (err) {
+      console.error('Cancel error:', err);
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   useEffect(() => {
     fetchData();
