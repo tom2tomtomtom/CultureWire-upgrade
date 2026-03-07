@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Step 1: Generate brand context
-      const brandContext = await generateBrandContext(brandName);
+      const brandContext = await generateBrandContext(brandName, geo);
 
       await admin
         .from('culture_wire_searches')
