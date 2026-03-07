@@ -236,12 +236,17 @@ export const ACTOR_REGISTRY: Record<string, ActorRegistryEntry> = {
       'Audience sentiment via comments',
     ],
     inputSchema: InstagramInputSchema,
-    buildInput: (params) => ({
-      hashtags: params.hashtags.length > 0
-        ? params.hashtags
-        : params.keywords.slice(0, 3),
-      resultsLimit: Math.min(params.maxResults, 200),
-    }),
+    buildInput: (params) => {
+      const raw = params.hashtags.length > 0 ? params.hashtags : params.keywords.slice(0, 3);
+      // Sanitize: strip spaces and special chars, Instagram hashtags must be clean alphanumeric
+      const hashtags = raw
+        .map((h) => h.replace(/[^a-zA-Z0-9]/g, '').toLowerCase())
+        .filter((h) => h.length > 0);
+      return {
+        hashtags: hashtags.length > 0 ? hashtags : ['trending'],
+        resultsLimit: Math.min(params.maxResults, 200),
+      };
+    },
     extractFields: ['caption', 'likesCount', 'commentsCount', 'timestamp', 'ownerUsername', 'hashtags', 'url', 'displayUrl', 'locationName', 'type'],
     costProfile: { model: 'pay_per_result', estimatedCostPer100: 23 },
     defaults: { maxResults: 100, timeout: 300 },
