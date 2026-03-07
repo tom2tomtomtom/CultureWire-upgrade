@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 
-const STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
+const STALE_THRESHOLD_MS = 20 * 60 * 1000; // 20 minutes
+const STALE_BATCH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes since last batch update
 
 export async function GET(
   _request: NextRequest,
@@ -32,30 +33,36 @@ export async function GET(
   const search = searchResult.data;
 
   // Auto-recover stale searches stuck in collecting/analyzing
-  if (
-    (search.status === 'collecting' || search.status === 'analyzing') &&
-    Date.now() - new Date(search.created_at).getTime() > STALE_THRESHOLD_MS
-  ) {
-    const results = resultsResult.data || [];
-    const analyses = analysesResult.data || [];
-    const hasData = results.length > 0 || analyses.length > 0;
+  if (search.status === 'collecting' || search.status === 'analyzing') {
+    const lastUpdate = search.result_summary?.last_update;
+    const batchStale = lastUpdate && Date.now() - new Date(lastUpdate).getTime() > STALE_BATCH_THRESHOLD_MS;
+    const createdStale = Date.now() - new Date(search.created_at).getTime() > STALE_THRESHOLD_MS;
 
-    const admin = createAdminClient();
-    await admin
-      .from('culture_wire_searches')
-      .update({
-        status: hasData ? 'complete' : 'failed',
-        completed_at: new Date().toISOString(),
-        result_summary: {
-          ...(search.result_summary || {}),
-          auto_recovered: true,
-          recovery_reason: 'Stale search detected (>10min)',
-          total_items: results.reduce((sum: number, r: { item_count: number }) => sum + r.item_count, 0),
-        },
-      })
-      .eq('id', id);
+    if (batchStale || createdStale) {
+      const results = resultsResult.data || [];
+      const analyses = analysesResult.data || [];
+      const hasData = results.length > 0 || analyses.length > 0;
+      const recoveryReason = batchStale
+        ? `Pipeline stalled (no batch update for >5min, last: ${lastUpdate})`
+        : 'Stale search detected (>20min since creation)';
 
-    search.status = hasData ? 'complete' : 'failed';
+      const admin = createAdminClient();
+      await admin
+        .from('culture_wire_searches')
+        .update({
+          status: hasData ? 'complete' : 'failed',
+          completed_at: new Date().toISOString(),
+          result_summary: {
+            ...(search.result_summary || {}),
+            auto_recovered: true,
+            recovery_reason: recoveryReason,
+            total_items: results.reduce((sum: number, r: { item_count: number }) => sum + r.item_count, 0),
+          },
+        })
+        .eq('id', id);
+
+      search.status = hasData ? 'complete' : 'failed';
+    }
   }
 
   return NextResponse.json({
@@ -79,6 +86,25 @@ export async function PATCH(
 
   if (body.action === 'cancel') {
     const supabase = await createServerClient();
+
+    // Get current search to read active runs
+    const { data: currentSearch } = await supabase
+      .from('culture_wire_searches')
+      .select('result_summary')
+      .eq('id', id)
+      .single();
+
+    // Abort active Apify runs to save credits
+    const activeRuns = (currentSearch?.result_summary as Record<string, unknown>)?.active_runs as string[] | undefined;
+    if (activeRuns && activeRuns.length > 0) {
+      await Promise.allSettled(
+        activeRuns.map(runId =>
+          fetch(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${process.env.APIFY_API_KEY}`, {
+            method: 'POST',
+          })
+        )
+      );
+    }
 
     // Get current results count
     const { data: results } = await supabase

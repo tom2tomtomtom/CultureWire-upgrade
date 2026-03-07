@@ -1,6 +1,8 @@
 import { getAnthropicClient } from '@/lib/anthropic';
 import type { BrandContext } from '@/lib/types';
 
+const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
+
 const GEO_LABELS: Record<string, string> = {
   AU: 'Australia',
   US: 'United States',
@@ -35,20 +37,32 @@ export async function generateBrandContext(brandName: string, geo: string = 'AU'
   const anthropic = getAnthropicClient();
   const market = GEO_LABELS[geo] || geo;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
-    messages: [{
-      role: 'user',
-      content: `Analyze this brand for the ${market} market and generate brand context: "${brandName}"`,
-    }],
-    system: buildBrandContextPrompt(geo),
-  });
+  let text = '';
+  for (let i = 0; i < MODELS.length; i++) {
+    try {
+      const response = await anthropic.messages.create({
+        model: MODELS[i],
+        max_tokens: 2048,
+        messages: [{
+          role: 'user',
+          content: `Analyze this brand for the ${market} market and generate brand context: "${brandName}"`,
+        }],
+        system: buildBrandContextPrompt(geo),
+      });
 
-  const text = response.content
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text)
-    .join('');
+      text = response.content
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text)
+        .join('');
+      break;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if ((msg.includes('overloaded') || msg.includes('529')) && i < MODELS.length - 1) {
+        continue;
+      }
+      throw err;
+    }
+  }
 
   try {
     return JSON.parse(text) as BrandContext;

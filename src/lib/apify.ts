@@ -47,10 +47,13 @@ export async function getApifyCreditBalance(): Promise<ApifyCreditInfo | null> {
 // DIRECT REDDIT API (no Apify needed)
 // ============================================
 
-async function getRedditAccessToken(): Promise<string> {
-  const auth = Buffer.from(
-    `${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`
-  ).toString('base64');
+export async function getRedditAccessToken(): Promise<string> {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Reddit API credentials not configured: REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET required');
+  }
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   const res = await fetch('https://www.reddit.com/api/v1/access_token', {
     method: 'POST',
@@ -216,17 +219,18 @@ export async function getDatasetItems(
 
 export async function pollRunToCompletion(
   runId: string,
-  timeoutMs: number = 300_000,
-  intervalMs: number = 5_000
+  timeoutMs: number = 300_000
 ): Promise<ApifyRunResult> {
   const start = Date.now();
+  let interval = 3_000; // Start at 3s
   while (Date.now() - start < timeoutMs) {
     const run = await getRunStatus(runId);
     if (run.status === 'SUCCEEDED') return run;
     if (run.status === 'FAILED' || run.status === 'ABORTED' || run.status === 'TIMED-OUT') {
       throw new Error(`Apify run ${runId} ${run.status}`);
     }
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
+    await new Promise(resolve => setTimeout(resolve, interval));
+    interval = Math.min(interval * 1.5, 30_000); // Cap at 30s
   }
   throw new Error(`Apify run ${runId} timed out after ${timeoutMs}ms`);
 }

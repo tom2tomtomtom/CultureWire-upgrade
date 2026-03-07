@@ -62,7 +62,10 @@ export async function POST(request: NextRequest) {
 
       await admin
         .from('culture_wire_searches')
-        .update({ brand_context: brandContext })
+        .update({
+          brand_context: brandContext,
+          result_summary: { phase: 'context_complete', last_update: new Date().toISOString() },
+        })
         .eq('id', search.id);
 
       // Step 2: Run 3-layer collection

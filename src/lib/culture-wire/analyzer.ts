@@ -188,6 +188,11 @@ export async function runAnalysisPipeline(
 
   const enrichedPayload = dataPayload + perplexityContext;
 
+  // Update phase: analyzing opportunities
+  await supabase.from('culture_wire_searches').update({
+    result_summary: { phase: 'analyzing_opportunities', last_update: new Date().toISOString() },
+  }).eq('id', searchId);
+
   // Run opportunity scoring and tension detection in parallel
   const [opportunitiesRaw, tensionsRaw] = await Promise.all([
     callClaude(
@@ -248,6 +253,11 @@ export async function runAnalysisPipeline(
     brand_implication: t.brand_implication,
   }));
   const briefInput = `## IDENTIFIED OPPORTUNITIES\n${JSON.stringify(opportunitySummary, null, 2)}\n\n## IDENTIFIED TENSIONS\n${JSON.stringify(tensionSummary, null, 2)}`;
+
+  // Update phase: generating brief
+  await supabase.from('culture_wire_searches').update({
+    result_summary: { phase: 'generating_brief', last_update: new Date().toISOString() },
+  }).eq('id', searchId);
 
   const strategicBrief = await callClaude(
     buildStrategicBriefPrompt(brandName, context),

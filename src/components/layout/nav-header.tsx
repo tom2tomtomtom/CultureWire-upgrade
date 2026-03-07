@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Grid3X3, Users } from 'lucide-react';
@@ -9,6 +10,14 @@ import { cn } from '@/lib/utils';
 
 export function NavHeader({ email }: { email: string | null }) {
   const pathname = usePathname();
+  const [healthStatus, setHealthStatus] = useState<'loading' | 'healthy' | 'degraded' | 'unhealthy'>('loading');
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => setHealthStatus(data.status))
+      .catch(() => setHealthStatus('unhealthy'));
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b-2 border-[#FF0000] bg-[#0a0a0f]">
@@ -21,6 +30,12 @@ export function NavHeader({ email }: { email: string | null }) {
             <span className="text-lg font-light tracking-tight text-[#888899] uppercase">
               // Listen
             </span>
+            <span className={cn('ml-2 inline-block h-2 w-2 rounded-full', {
+              'bg-gray-500': healthStatus === 'loading',
+              'bg-green-500': healthStatus === 'healthy',
+              'bg-amber-500': healthStatus === 'degraded',
+              'bg-red-500': healthStatus === 'unhealthy',
+            })} title={`System: ${healthStatus}`} />
           </Link>
           <nav className="flex items-center gap-0.5">
             <Link

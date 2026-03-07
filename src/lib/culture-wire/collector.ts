@@ -41,23 +41,24 @@ async function collectFromPlatform(
   platform: Platform,
   layer: CultureWireLayer,
   params: PlannerParams
-): Promise<Record<string, unknown>[]> {
+): Promise<{ items: Record<string, unknown>[]; runId?: string }> {
   const registry = ACTOR_REGISTRY[platform];
   if (!registry) throw new Error(`Unknown platform: ${platform}`);
 
   const input = registry.buildInput(params);
 
   if (platform === 'reddit') {
-    return scrapeRedditDirect(input);
+    return { items: await scrapeRedditDirect(input) };
   }
 
   if (platform === ('news' as Platform)) {
-    return collectNewsArticles(input);
+    return { items: await collectNewsArticles(input) };
   }
 
   const { runId } = await startActorRun(registry.id, input);
   const run = await pollRunToCompletion(runId, 300_000);
-  return getDatasetItems(run.defaultDatasetId, params.maxResults);
+  const items = await getDatasetItems(run.defaultDatasetId, params.maxResults);
+  return { items, runId };
 }
 
 export async function runThreeLayerCollection(
@@ -111,13 +112,17 @@ export async function runThreeLayerCollection(
   // Run all tasks in parallel (with concurrency limit)
   const CONCURRENCY = 4;
   const results: CollectionResult[] = [];
+  const warnings: string[] = [];
+  const activeRunIds: string[] = [];
 
   for (let i = 0; i < tasks.length; i += CONCURRENCY) {
     const batch = tasks.slice(i, i + CONCURRENCY);
+    const batchRunIds: string[] = [];
     const batchResults = await Promise.allSettled(
       batch.map(async (task) => {
         try {
-          const items = await collectFromPlatform(task.platform, task.layer, task.params);
+          const { items, runId } = await collectFromPlatform(task.platform, task.layer, task.params);
+          if (runId) batchRunIds.push(runId);
 
           // Save to DB
           await supabase.from('culture_wire_results').insert({
@@ -136,6 +141,7 @@ export async function runThreeLayerCollection(
           };
         } catch (error) {
           console.error(`[culture-wire] ${task.platform}/${task.layer} failed:`, error);
+          warnings.push(`${task.platform}/${task.layer}: ${error instanceof Error ? error.message : 'Unknown error'}`);
           // Save empty result to track the failure
           await supabase.from('culture_wire_results').insert({
             search_id: searchId,
@@ -155,6 +161,9 @@ export async function runThreeLayerCollection(
       })
     );
 
+    // Track active runs from this batch
+    activeRunIds.push(...batchRunIds);
+
     for (const result of batchResults) {
       if (result.status === 'fulfilled') {
         results.push(result.value);
@@ -171,6 +180,8 @@ export async function runThreeLayerCollection(
           collection_progress: `${completedCount}/${tasks.length}`,
           total_items: totalItems,
           last_update: new Date().toISOString(),
+          warnings: warnings.length > 0 ? warnings : undefined,
+          active_runs: activeRunIds,
         },
       })
       .eq('id', searchId);
@@ -237,7 +248,7 @@ export async function runCategoryCollection(
     const batchResults = await Promise.allSettled(
       batch.map(async (task) => {
         try {
-          const items = await collectFromPlatform(task.platform, task.layer, task.params);
+          const { items } = await collectFromPlatform(task.platform, task.layer, task.params);
 
           await supabase.from('culture_wire_results').insert({
             search_id: searchId,

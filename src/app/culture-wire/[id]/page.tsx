@@ -8,6 +8,18 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, XCircle } from 'lucide-react';
 import type { CultureWireSearch, CultureWireResult, CultureWireAnalysis } from '@/lib/types';
 
+function friendlyError(error: string): string {
+  if (error.includes('token') || error.includes('too long') || error.includes('MAX_INPUT_CHARS'))
+    return 'Too much data was collected for analysis. Try selecting fewer platforms.';
+  if (error.includes('overloaded') || error.includes('529'))
+    return 'AI analysis service is temporarily busy. Try again in a few minutes.';
+  if (error.includes('timed out') || error.includes('timeout'))
+    return 'Data collection timed out. Some platforms may have been slow to respond.';
+  if (error.includes('Apify'))
+    return 'Data collection service encountered an error. Please try again.';
+  return error;
+}
+
 function statusColor(status: string) {
   switch (status) {
     case 'collecting': return 'border-blue-500 text-blue-400 bg-blue-500/10';
@@ -151,9 +163,22 @@ export default function CultureWireDetailPage() {
           <p className="text-[#FF0000] font-bold uppercase tracking-widest">Search failed. Please try again.</p>
           {search.result_summary && 'error' in search.result_summary && (
             <p className="mt-2 text-sm text-[#888899]">
-              {String(search.result_summary.error)}
+              {friendlyError(String(search.result_summary.error))}
             </p>
           )}
+          <button
+            onClick={async () => {
+              try {
+                const res = await fetch(`/api/culture-wire/${id}/analyze`, { method: 'POST' });
+                if (res.ok) fetchData();
+              } catch (err) {
+                console.error('Retry failed:', err);
+              }
+            }}
+            className="mt-4 border border-[#FF0000] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#FF0000] transition-colors hover:bg-[#FF0000]/10"
+          >
+            Retry Analysis
+          </button>
         </div>
       )}
     </div>

@@ -35,6 +35,13 @@ export async function GET(
   const tens = (tensions?.content as { tensions?: CulturalTension[] })?.tensions || [];
   const briefText = (brief?.content as { brief?: string })?.brief || '';
 
+  if (opps.length === 0 && tens.length === 0 && !briefText) {
+    return NextResponse.json(
+      { error: 'No analysis data available. The search may still be processing or may have failed.' },
+      { status: 400 }
+    );
+  }
+
   if (format === 'csv') {
     const rows = [
       ['Title', 'Score', 'Tier', 'Platform', 'Layer', 'Right to Play', 'Description'].join(','),

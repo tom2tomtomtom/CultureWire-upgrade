@@ -25,30 +25,40 @@ ${trend.platform ? `Platform: ${trend.platform}` : ''}
 
 Focus on: current status, recent developments, audience demographics, brand implications, and any controversies. Be concise (2-3 paragraphs).`;
 
-  const response = await fetch(PERPLEXITY_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'sonar',
-      messages: [
-        { role: 'system', content: 'You are a cultural intelligence analyst. Provide concise, factual context about trends and cultural moments. Include specific data points and recent developments.' },
-        { role: 'user', content: query },
-      ],
-      max_tokens: 1024,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Perplexity API error ${response.status}: ${text}`);
+  let content: string;
+  let citations: string[];
+  try {
+    const response = await fetch(PERPLEXITY_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          { role: 'system', content: 'You are a cultural intelligence analyst. Provide concise, factual context about trends and cultural moments. Include specific data points and recent developments.' },
+          { role: 'user', content: query },
+        ],
+        max_tokens: 1024,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Perplexity API error ${response.status}: ${text}`);
+    }
+
+    const data = await response.json();
+    content = data.choices?.[0]?.message?.content || '';
+    citations = data.citations || [];
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '';
-  const citations = data.citations || [];
 
   return {
     context: content,

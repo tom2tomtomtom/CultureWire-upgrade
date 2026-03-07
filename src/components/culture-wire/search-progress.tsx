@@ -58,7 +58,15 @@ export function SearchProgress({ search, results }: SearchProgressProps) {
               <div className="h-1 w-3/4 bg-[#FF4400] transition-all duration-500" />
             </div>
             <p className="text-sm font-mono text-[#888899]">
-              Running AI analysis on {results.reduce((sum, r) => sum + r.item_count, 0)} collected items...
+              {(() => {
+                const phase = (search.result_summary as Record<string, unknown> | null)?.phase as string | undefined;
+                switch (phase) {
+                  case 'context_complete': return 'Brand context generated. Collecting data...';
+                  case 'analyzing_opportunities': return 'Analyzing opportunities and tensions...';
+                  case 'generating_brief': return 'Generating strategic brief...';
+                  default: return `Running AI analysis on ${results.reduce((sum, r) => sum + r.item_count, 0)} collected items...`;
+                }
+              })()}
             </p>
           </>
         )}
@@ -93,6 +101,19 @@ export function SearchProgress({ search, results }: SearchProgressProps) {
             );
           })}
         </div>
+
+        {(() => {
+          const warnings = (search.result_summary as Record<string, unknown> | null)?.warnings as string[] | undefined;
+          if (!warnings || warnings.length === 0) return null;
+          return (
+            <div className="border border-amber-500/30 bg-amber-500/5 p-3 space-y-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Warnings</p>
+              {warnings.map((w: string, i: number) => (
+                <p key={i} className="text-xs font-mono text-amber-400/80">{w}</p>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

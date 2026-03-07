@@ -12,7 +12,7 @@ interface SupplementaryResult {
  * Run supplementary scan for deeper insights on top opportunities.
  * Adds Reddit thread deep dives, Google Trends data, and News articles.
  */
-export async function runSupplementaryScan(
+async function runSupplementaryScanInternal(
   searchId: string,
   keywords: string[],
   geo: string = 'AU'
@@ -106,4 +106,20 @@ export async function runSupplementaryScan(
   }
 
   return results;
+}
+
+export async function runSupplementaryScan(
+  searchId: string,
+  keywords: string[],
+  geo: string = 'AU'
+): Promise<SupplementaryResult[]> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Supplementary scan timed out after 5 minutes')), 5 * 60 * 1000)
+  );
+  try {
+    return await Promise.race([runSupplementaryScanInternal(searchId, keywords, geo), timeout]);
+  } catch (err) {
+    console.error('[supplementary] Scan timed out or failed:', err);
+    return [];
+  }
 }
