@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/auth/session';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 
 const STALE_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
@@ -62,4 +63,52 @@ export async function GET(
     results: resultsResult.data || [],
     analyses: analysesResult.data || [],
   });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const body = await request.json();
+
+  if (body.action === 'cancel') {
+    const supabase = await createServerClient();
+
+    // Get current results count
+    const { data: results } = await supabase
+      .from('culture_wire_results')
+      .select('item_count')
+      .eq('search_id', id);
+
+    const totalItems = (results || []).reduce((sum, r) => sum + r.item_count, 0);
+    const hasData = totalItems > 0;
+
+    const admin = createAdminClient();
+    const { error } = await admin
+      .from('culture_wire_searches')
+      .update({
+        status: hasData ? 'complete' : 'failed',
+        completed_at: new Date().toISOString(),
+        result_summary: {
+          total_items: totalItems,
+          cancelled: true,
+          cancelled_by: session.email,
+        },
+      })
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ status: hasData ? 'complete' : 'failed' });
+  }
+
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
 }

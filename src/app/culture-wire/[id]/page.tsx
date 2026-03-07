@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { SearchProgress } from '@/components/culture-wire/search-progress';
 import { ResultsView } from '@/components/culture-wire/results-view';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, XCircle } from 'lucide-react';
 import type { CultureWireSearch, CultureWireResult, CultureWireAnalysis } from '@/lib/types';
 
 function statusColor(status: string) {
@@ -24,6 +24,23 @@ export default function CultureWireDetailPage() {
   const [results, setResults] = useState<CultureWireResult[]>([]);
   const [analyses, setAnalyses] = useState<CultureWireAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+
+  async function handleCancel() {
+    setCancelling(true);
+    try {
+      await fetch(`/api/culture-wire/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      await fetchData();
+    } catch {
+      // ignore
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   const fetchData = useCallback(async () => {
     try {
@@ -73,9 +90,25 @@ export default function CultureWireDetailPage() {
             {new Date(search.created_at).toLocaleString()}
           </p>
         </div>
-        <Badge variant="outline" className={statusColor(search.status)}>
-          {search.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {(search.status === 'collecting' || search.status === 'analyzing') && (
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="flex items-center gap-1.5 border border-[#FF0000]/50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#FF0000] transition-colors hover:bg-[#FF0000]/10 disabled:opacity-40"
+            >
+              {cancelling ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <XCircle className="h-3 w-3" />
+              )}
+              Stop
+            </button>
+          )}
+          <Badge variant="outline" className={statusColor(search.status)}>
+            {search.status}
+          </Badge>
+        </div>
       </div>
 
       {search.brand_context && (
