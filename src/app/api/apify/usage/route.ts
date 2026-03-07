@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
+const APIFY_BASE = 'https://api.apify.com/v2';
+
 export async function GET() {
   const session = await getSession();
   if (!session) {
@@ -13,48 +15,52 @@ export async function GET() {
   }
 
   try {
-    // Get user account info (includes subscription & usage)
-    const userRes = await fetch(`https://api.apify.com/v2/users/me?token=${apiKey}`);
+    // Fetch account info and monthly usage in parallel
+    const [userRes, usageRes] = await Promise.all([
+      fetch(`${APIFY_BASE}/users/me?token=${apiKey}`),
+      fetch(`${APIFY_BASE}/users/me/usage/monthly?token=${apiKey}`),
+    ]);
+
     if (!userRes.ok) {
       return NextResponse.json({ error: 'Failed to fetch Apify account info' }, { status: 502 });
     }
+
     const userData = await userRes.json();
     const plan = userData.data?.plan;
-    const usage = userData.data?.usage;
+    const monthlyBudget = plan?.monthlyUsageCreditsUsd || 0;
 
-    // Get recent actor runs for cost tracking
-    const runsRes = await fetch(
-      `https://api.apify.com/v2/actor-runs?token=${apiKey}&limit=20&desc=true`
-    );
-    const runsData = runsRes.ok ? await runsRes.json() : { data: { items: [] } };
-    const recentRuns = (runsData.data?.items || []).map((run: Record<string, unknown>) => ({
-      id: run.id,
-      actorId: run.actId,
-      status: run.status,
-      startedAt: run.startedAt,
-      finishedAt: run.finishedAt,
-      usageTotalUsd: run.usageTotalUsd,
-      defaultDatasetId: run.defaultDatasetId,
-    }));
+    // Calculate total used from monthly usage breakdown
+    let totalUsed = 0;
+    const usageBreakdown: Record<string, number> = {};
+
+    if (usageRes.ok) {
+      const usageData = await usageRes.json();
+      const services = usageData.data?.monthlyServiceUsage || {};
+      for (const [key, val] of Object.entries(services)) {
+        const amt = (val as Record<string, number>)?.amountAfterVolumeDiscountUsd || 0;
+        totalUsed += amt;
+        if (amt > 0.001) {
+          usageBreakdown[key] = Math.round(amt * 100) / 100;
+        }
+      }
+    }
+
+    const remaining = monthlyBudget - totalUsed;
 
     return NextResponse.json({
       plan: {
-        name: plan?.name || 'Unknown',
-        monthlyUsageCreditsUsd: plan?.monthlyUsageCreditsUsd || 0,
-      },
-      usage: {
-        monthlyUsageCreditsUsedUsd: usage?.monthlyUsageCreditsUsedUsd || 0,
-        monthlyUsageCreditsMaxUsd: plan?.monthlyUsageCreditsUsd || 0,
+        name: plan?.id || 'Unknown',
+        monthlyBudget,
       },
       creditBalance: {
-        used: usage?.monthlyUsageCreditsUsedUsd || 0,
-        total: plan?.monthlyUsageCreditsUsd || 0,
-        remaining: (plan?.monthlyUsageCreditsUsd || 0) - (usage?.monthlyUsageCreditsUsedUsd || 0),
-        percentUsed: plan?.monthlyUsageCreditsUsd
-          ? Math.round(((usage?.monthlyUsageCreditsUsedUsd || 0) / plan.monthlyUsageCreditsUsd) * 100)
+        used: Math.round(totalUsed * 100) / 100,
+        total: monthlyBudget,
+        remaining: Math.round(remaining * 100) / 100,
+        percentUsed: monthlyBudget
+          ? Math.round((totalUsed / monthlyBudget) * 100)
           : 0,
       },
-      recentRuns,
+      usageBreakdown,
     });
   } catch (error) {
     console.error('[apify/usage] Error:', error);

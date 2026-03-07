@@ -15,13 +15,24 @@ export async function getApifyCreditBalance(): Promise<ApifyCreditInfo | null> {
   if (!apiKey) return null;
 
   try {
-    const res = await fetch(`${APIFY_BASE}/users/me?token=${apiKey}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const plan = data.data?.plan;
-    const usage = data.data?.usage;
-    const total = plan?.monthlyUsageCreditsUsd || 0;
-    const used = usage?.monthlyUsageCreditsUsedUsd || 0;
+    const [userRes, usageRes] = await Promise.all([
+      fetch(`${APIFY_BASE}/users/me?token=${apiKey}`),
+      fetch(`${APIFY_BASE}/users/me/usage/monthly?token=${apiKey}`),
+    ]);
+    if (!userRes.ok) return null;
+
+    const userData = await userRes.json();
+    const total = userData.data?.plan?.monthlyUsageCreditsUsd || 0;
+
+    let used = 0;
+    if (usageRes.ok) {
+      const usageData = await usageRes.json();
+      const services = usageData.data?.monthlyServiceUsage || {};
+      for (const val of Object.values(services)) {
+        used += (val as Record<string, number>)?.amountAfterVolumeDiscountUsd || 0;
+      }
+    }
+
     return {
       remaining: total - used,
       total,
