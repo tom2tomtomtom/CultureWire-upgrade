@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Search, Grid3X3, Users } from 'lucide-react';
 import { UserMenu } from '@/components/auth/user-menu';
+import { ApifyCreditBadge } from '@/components/layout/apify-credit-badge';
 import { cn } from '@/lib/utils';
 
 export function NavHeader({ email }: { email: string | null }) {
@@ -61,6 +62,7 @@ export function NavHeader({ email }: { email: string | null }) {
           </nav>
         </div>
         <div className="flex items-center gap-2">
+          <ApifyCreditBadge />
           <UserMenu email={email} />
         </div>
       </div>

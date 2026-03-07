@@ -1,5 +1,5 @@
 import { ACTOR_REGISTRY, type PlannerParams } from '@/lib/actor-registry';
-import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect, collectNewsArticles } from '@/lib/apify';
+import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect, collectNewsArticles, getApifyCreditBalance } from '@/lib/apify';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { BrandContext, CultureWireLayer, Platform } from '@/lib/types';
 import type { CategoryConfig } from './categories';
@@ -70,7 +70,29 @@ export async function runThreeLayerCollection(
 ): Promise<CollectionResult[]> {
   const supabase = createAdminClient();
   const layers: CultureWireLayer[] = ['brand', 'category', 'trending'];
-  const validPlatforms = platforms.filter((p) => p in ACTOR_REGISTRY) as Platform[];
+  let validPlatforms = platforms.filter((p) => p in ACTOR_REGISTRY) as Platform[];
+
+  // Cost optimization: check credit balance and adjust if low
+  const credits = await getApifyCreditBalance();
+  if (credits) {
+    console.log(`[cost] Apify credits: $${credits.remaining.toFixed(2)} remaining (${credits.percentUsed}% used)`);
+    if (credits.remaining < 1) {
+      // Critical: only use free platforms
+      console.warn('[cost] Credits critically low, restricting to free platforms only');
+      validPlatforms = validPlatforms.filter((p) => {
+        const reg = ACTOR_REGISTRY[p];
+        return reg?.costProfile.model === 'free';
+      });
+    } else if (credits.remaining < 5) {
+      // Low: reduce max results and skip most expensive actors
+      console.warn('[cost] Credits low, reducing collection scope');
+      maxResultsPerLayer = Math.min(maxResultsPerLayer, 25);
+      validPlatforms = validPlatforms.filter((p) => {
+        const reg = ACTOR_REGISTRY[p];
+        return (reg?.costProfile.estimatedCostPer100 || 0) < 100;
+      });
+    }
+  }
 
   // Build all collection tasks
   const tasks: { platform: Platform; layer: CultureWireLayer; params: PlannerParams }[] = [];

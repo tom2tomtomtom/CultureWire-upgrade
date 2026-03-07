@@ -1,6 +1,38 @@
 const APIFY_BASE = 'https://api.apify.com/v2';
 
 // ============================================
+// CREDIT BALANCE CHECK
+// ============================================
+
+export interface ApifyCreditInfo {
+  remaining: number;
+  total: number;
+  percentUsed: number;
+}
+
+export async function getApifyCreditBalance(): Promise<ApifyCreditInfo | null> {
+  const apiKey = process.env.APIFY_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const res = await fetch(`${APIFY_BASE}/users/me?token=${apiKey}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const plan = data.data?.plan;
+    const usage = data.data?.usage;
+    const total = plan?.monthlyUsageCreditsUsd || 0;
+    const used = usage?.monthlyUsageCreditsUsedUsd || 0;
+    return {
+      remaining: total - used,
+      total,
+      percentUsed: total ? Math.round((used / total) * 100) : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// ============================================
 // DIRECT REDDIT API (no Apify needed)
 // ============================================
 
