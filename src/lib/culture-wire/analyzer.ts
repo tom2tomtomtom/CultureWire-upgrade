@@ -9,8 +9,15 @@ import type { BrandContext, CultureWireResult, ScoredOpportunity, CulturalTensio
 
 const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
 
+const MAX_INPUT_CHARS = 500_000; // ~125k tokens, safe under 200k limit with system prompt
+
 async function callClaude(system: string, userContent: string, maxTokens = 8192): Promise<string> {
   const anthropic = getAnthropicClient();
+
+  // Safety truncation to prevent token limit errors
+  const truncatedContent = userContent.length > MAX_INPUT_CHARS
+    ? userContent.slice(0, MAX_INPUT_CHARS) + '\n\n[TRUNCATED - data exceeded size limit]'
+    : userContent;
 
   for (let i = 0; i < MODELS.length; i++) {
     try {
@@ -18,7 +25,7 @@ async function callClaude(system: string, userContent: string, maxTokens = 8192)
         model: MODELS[i],
         max_tokens: maxTokens,
         system,
-        messages: [{ role: 'user', content: userContent }],
+        messages: [{ role: 'user', content: truncatedContent }],
       });
 
       return response.content
@@ -85,15 +92,17 @@ function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean =
 
     const topItems = scored
       .sort((a, b) => b._score - a._score)
-      .slice(0, 50)
+      .slice(0, 15)
       .map((item) => {
         const clean: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(item)) {
-          if (typeof v === 'string' && v.length > 500) {
-            clean[k] = v.slice(0, 500) + '...';
-          } else if (typeof v === 'object' && v !== null && !k.startsWith('_')) {
+          // Skip internal scoring fields and large nested objects
+          if (k.startsWith('_') && k !== '_score' && k !== '_tier') continue;
+          if (typeof v === 'string' && v.length > 300) {
+            clean[k] = v.slice(0, 300) + '...';
+          } else if (typeof v === 'object' && v !== null) {
             const json = JSON.stringify(v);
-            clean[k] = json.length > 300 ? json.slice(0, 300) + '...' : v;
+            clean[k] = json.length > 200 ? json.slice(0, 200) + '...' : v;
           } else {
             clean[k] = v;
           }
@@ -229,7 +238,16 @@ export async function runAnalysisPipeline(
   }
 
   // Run strategic brief (depends on opportunities + tensions)
-  const briefInput = `${enrichedPayload}\n\n---\n\n## IDENTIFIED OPPORTUNITIES\n${JSON.stringify(opportunities, null, 2)}\n\n## IDENTIFIED TENSIONS\n${JSON.stringify(tensions, null, 2)}`;
+  // Use condensed summaries instead of full payload to stay within token limits
+  const opportunitySummary = opportunities.slice(0, 10).map((o) => ({
+    title: o.title, tier: o.tier, score: o.score, description: o.description,
+    right_to_play: o.right_to_play, platform: o.platform,
+  }));
+  const tensionSummary = tensions.slice(0, 8).map((t) => ({
+    name: t.name, severity: t.severity, description: t.description,
+    brand_implication: t.brand_implication,
+  }));
+  const briefInput = `## IDENTIFIED OPPORTUNITIES\n${JSON.stringify(opportunitySummary, null, 2)}\n\n## IDENTIFIED TENSIONS\n${JSON.stringify(tensionSummary, null, 2)}`;
 
   const strategicBrief = await callClaude(
     buildStrategicBriefPrompt(brandName, context),
