@@ -11,10 +11,13 @@ interface CheckResult {
   credits_remaining?: number;
 }
 
-async function timedCheck(name: string, fn: () => Promise<Partial<CheckResult>>): Promise<[string, CheckResult]> {
+async function timedCheck(name: string, fn: () => Promise<Partial<CheckResult>>, timeoutMs = 10_000): Promise<[string, CheckResult]> {
   const start = Date.now();
   try {
-    const result = await fn();
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${name} check timed out after ${timeoutMs}ms`)), timeoutMs)
+    );
+    const result = await Promise.race([fn(), timeout]);
     return [name, { ok: true, latency_ms: Date.now() - start, ...result }];
   } catch (err) {
     return [name, { ok: false, latency_ms: Date.now() - start, error: err instanceof Error ? err.message : String(err) }];
@@ -35,12 +38,8 @@ export async function GET() {
       return {};
     }),
     timedCheck('claude', async () => {
-      const anthropic = getAnthropicClient();
-      await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 5,
-        messages: [{ role: 'user', content: 'ping' }],
-      });
+      if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+      getAnthropicClient(); // Verify client can be constructed
       return {};
     }),
     timedCheck('apify', async () => {

@@ -13,10 +13,14 @@ export function NavHeader({ email }: { email: string | null }) {
   const [healthStatus, setHealthStatus] = useState<'loading' | 'healthy' | 'degraded' | 'unhealthy'>('loading');
 
   useEffect(() => {
-    fetch('/api/health')
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    fetch('/api/health', { signal: controller.signal })
       .then(res => res.json())
-      .then(data => setHealthStatus(data.status))
-      .catch(() => setHealthStatus('unhealthy'));
+      .then(data => setHealthStatus(data.status || 'unhealthy'))
+      .catch(() => setHealthStatus('unhealthy'))
+      .finally(() => clearTimeout(timeoutId));
+    return () => { controller.abort(); clearTimeout(timeoutId); };
   }, []);
 
   return (
