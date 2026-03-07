@@ -43,6 +43,11 @@ export function SearchProgress({ search, results }: SearchProgressProps) {
             </div>
             <p className="text-sm font-mono text-[#888899]">
               {totalCollected} of ~{totalExpected} collection tasks complete
+              {search.result_summary && 'last_update' in search.result_summary && (
+                <span className="ml-2 text-[#555566]">
+                  (updated {new Date(String(search.result_summary.last_update)).toLocaleTimeString()})
+                </span>
+              )}
             </p>
           </>
         )}

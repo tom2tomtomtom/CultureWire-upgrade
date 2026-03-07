@@ -160,6 +160,20 @@ export async function runThreeLayerCollection(
         results.push(result.value);
       }
     }
+
+    // Update progress on the search record so the UI can show batch progress
+    const completedCount = results.length;
+    const totalItems = results.reduce((sum, r) => sum + r.itemCount, 0);
+    await supabase
+      .from('culture_wire_searches')
+      .update({
+        result_summary: {
+          collection_progress: `${completedCount}/${tasks.length}`,
+          total_items: totalItems,
+          last_update: new Date().toISOString(),
+        },
+      })
+      .eq('id', searchId);
   }
 
   return results;
