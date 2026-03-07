@@ -1,11 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { CultureWireSearch } from '@/lib/types';
 
 const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram', 'twitter', 'linkedin', 'facebook', 'news'] as const;
@@ -66,78 +62,85 @@ export function SearchForm({ onSearchCreated }: SearchFormProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Zap className="h-4 w-4" />
+    <div className="border border-[#2a2a38] bg-[#111118]">
+      <div className="border-b border-[#2a2a38] px-4 py-3">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-[#888899]">
           New Brand Search
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </h3>
+      </div>
+      <div className="p-4">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Input
-              placeholder="Enter brand name (e.g., Nike, Oatly, Patagonia)"
-              value={brandName}
-              onChange={(e) => setBrandName(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Enter brand name (e.g., Nike, Oatly, Patagonia)"
+            value={brandName}
+            onChange={(e) => setBrandName(e.target.value)}
+            required
+            disabled={loading}
+            className="w-full border border-[#2a2a38] bg-[#0a0a0f] px-4 py-3 text-white placeholder-[#555566] focus:border-[#FF0000] focus:outline-none disabled:opacity-50"
+          />
 
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-6">
             <div>
-              <p className="mb-1.5 text-sm font-medium">Region</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#888899]">Region</p>
               <div className="flex gap-1">
                 {GEOS.map((g) => (
-                  <Button
+                  <button
                     key={g.code}
                     type="button"
-                    variant={geo === g.code ? 'default' : 'outline'}
-                    size="sm"
                     onClick={() => setGeo(g.code)}
                     disabled={loading}
+                    className={`border px-3 py-1.5 text-xs font-mono uppercase transition-colors ${
+                      geo === g.code
+                        ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
+                        : 'border-[#2a2a38] text-[#888899] hover:border-[#555566] hover:text-white'
+                    }`}
                   >
                     {g.code}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <p className="mb-1.5 text-sm font-medium">Platforms</p>
-              <div className="flex gap-1">
+              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#888899]">Platforms</p>
+              <div className="flex flex-wrap gap-1">
                 {PLATFORMS.map((p) => (
-                  <Badge
+                  <button
                     key={p}
-                    variant={platforms.includes(p) ? 'default' : 'outline'}
-                    className="cursor-pointer select-none"
+                    type="button"
                     onClick={() => !loading && togglePlatform(p)}
+                    className={`border px-2.5 py-1 text-xs uppercase transition-colors ${
+                      platforms.includes(p)
+                        ? 'border-[#FF4400]/50 bg-[#FF4400]/10 text-[#FF4400]'
+                        : 'border-[#2a2a38] text-[#555566] hover:text-[#888899]'
+                    }`}
                   >
                     {p}
-                  </Badge>
+                  </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-[#FF0000]">{error}</p>}
 
-          <Button type="submit" disabled={loading || !brandName.trim() || platforms.length === 0}>
+          <button
+            type="submit"
+            disabled={loading || !brandName.trim() || platforms.length === 0}
+            className="border-2 border-[#FF0000] bg-[#FF0000] px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#FF0000]/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Starting search...
-              </>
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Searching...
+              </span>
             ) : (
-              <>
-                <Zap className="mr-2 h-4 w-4" />
-                Search
-              </>
+              'Search'
             )}
-          </Button>
+          </button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

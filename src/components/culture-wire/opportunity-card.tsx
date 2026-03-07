@@ -1,20 +1,18 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import type { ScoredOpportunity } from '@/lib/types';
 
 const tierStyles = {
-  GOLD: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
-  SILVER: 'bg-zinc-300/10 text-zinc-500 border-zinc-400/30',
-  BRONZE: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
+  GOLD: 'border-yellow-500 text-yellow-400 bg-yellow-500/10',
+  SILVER: 'border-zinc-400 text-zinc-400 bg-zinc-400/10',
+  BRONZE: 'border-orange-500 text-orange-400 bg-orange-500/10',
 };
 
 const rtpStyles = {
-  GREEN: 'bg-green-500/10 text-green-600',
-  YELLOW: 'bg-amber-500/10 text-amber-600',
-  RED: 'bg-red-500/10 text-red-600',
+  GREEN: 'border-green-500 text-green-400 bg-green-500/10',
+  YELLOW: 'border-amber-500 text-amber-400 bg-amber-500/10',
+  RED: 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10',
 };
 
 interface OpportunityCardProps {
@@ -26,55 +24,57 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
   const { title, description, tier, score, components, right_to_play, evidence, platform, layer } = opportunity;
 
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
+    <div className="border border-[#2a2a38] bg-[#111118] overflow-hidden">
+      <div className="border-b border-[#2a2a38] px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
+            <span className="flex h-6 w-6 items-center justify-center bg-[#2a2a38] text-xs font-bold font-mono text-white">
               {rank}
             </span>
-            <CardTitle className="text-base">{title}</CardTitle>
+            <h3 className="font-bold text-sm uppercase tracking-wide">{title}</h3>
           </div>
           <div className="flex items-center gap-1.5">
-            <Badge className={tierStyles[tier]}>{tier}</Badge>
-            <Badge className={rtpStyles[right_to_play]}>{right_to_play}</Badge>
+            <Badge variant="outline" className={tierStyles[tier]}>{tier}</Badge>
+            <Badge variant="outline" className={rtpStyles[right_to_play]}>{right_to_play}</Badge>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="p-4 space-y-3">
+        <p className="text-sm text-[#888899]">{description}</p>
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="font-mono text-lg font-bold text-foreground">{score}</span>
-          <Badge variant="outline" className="text-[10px]">{platform}</Badge>
-          <Badge variant="outline" className="text-[10px]">{layer}</Badge>
+        <div className="flex items-center gap-4 text-xs text-[#888899]">
+          <span className="font-mono text-lg font-bold text-white">{score}</span>
+          <span className="border border-[#2a2a38] px-2 py-0.5 text-[10px] font-mono uppercase">{platform}</span>
+          <span className="border border-[#2a2a38] px-2 py-0.5 text-[10px] font-mono uppercase">{layer}</span>
         </div>
 
         <div className="space-y-1.5">
           {Object.entries(components).map(([key, value]) => (
             <div key={key} className="flex items-center gap-2">
-              <span className="w-28 text-xs capitalize text-muted-foreground">
+              <span className="w-28 text-xs uppercase tracking-wide text-[#888899]">
                 {key.replace('_', ' ')}
               </span>
-              <Progress value={value} className="h-1.5 flex-1" />
-              <span className="w-8 text-right text-xs">{value}</span>
+              <div className="h-1 flex-1 bg-[#2a2a38]">
+                <div className="h-1 bg-[#FF4400]" style={{ width: `${value}%` }} />
+              </div>
+              <span className="w-8 text-right text-xs font-mono text-[#888899]">{value}</span>
             </div>
           ))}
         </div>
 
         {evidence.length > 0 && (
           <div className="space-y-1">
-            <p className="text-xs font-medium">Evidence</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Evidence</p>
             <ul className="space-y-0.5">
               {evidence.map((e, i) => (
-                <li key={i} className="text-xs text-muted-foreground">
+                <li key={i} className="text-xs text-[#555566]">
                   &bull; {e}
                 </li>
               ))}
             </ul>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

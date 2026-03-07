@@ -1,12 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { OpportunityCard } from './opportunity-card';
 import { ExportMenu } from './export-menu';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, Microscope } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -74,18 +72,17 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
       {/* Action bar */}
       <div className="flex items-center gap-2">
         <ExportMenu searchId={search.id} />
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={handleDeepDive}
           disabled={deepDiveLoading || search.status !== 'complete'}
+          className="flex items-center gap-2 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF4400] hover:text-[#FF4400] disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {deepDiveLoading ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Starting...</>
+            <><Loader2 className="h-3.5 w-3.5 animate-spin" />Starting...</>
           ) : (
-            <><Microscope className="mr-2 h-4 w-4" />Deep Dive</>
+            <><Microscope className="h-3.5 w-3.5" />Deep Dive</>
           )}
-        </Button>
+        </button>
       </div>
 
       {/* Summary stats */}
@@ -93,25 +90,29 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
         <StatCard label="Items Collected" value={totalItems} />
         <StatCard label="Platforms" value={search.platforms.length} />
         <StatCard label="Opportunities" value={opportunities.length} />
-        <StatCard label="GOLD" value={goldCount} className="text-yellow-600" />
+        <StatCard label="GOLD" value={goldCount} accent />
         <StatCard label="Tensions" value={tensions.length} />
       </div>
 
       <Tabs defaultValue="opportunities">
-        <TabsList>
-          <TabsTrigger value="opportunities">
+        <TabsList className="border border-[#2a2a38] bg-[#0a0a0f] p-0.5">
+          <TabsTrigger value="opportunities" className="text-xs font-bold uppercase tracking-widest data-[state=active]:bg-[#FF0000]/10 data-[state=active]:text-[#FF0000]">
             Opportunities ({opportunities.length})
           </TabsTrigger>
-          <TabsTrigger value="tensions">
+          <TabsTrigger value="tensions" className="text-xs font-bold uppercase tracking-widest data-[state=active]:bg-[#FF0000]/10 data-[state=active]:text-[#FF0000]">
             Tensions ({tensions.length})
           </TabsTrigger>
-          <TabsTrigger value="brief">Strategic Brief</TabsTrigger>
-          <TabsTrigger value="data">Collection Data</TabsTrigger>
+          <TabsTrigger value="brief" className="text-xs font-bold uppercase tracking-widest data-[state=active]:bg-[#FF0000]/10 data-[state=active]:text-[#FF0000]">
+            Strategic Brief
+          </TabsTrigger>
+          <TabsTrigger value="data" className="text-xs font-bold uppercase tracking-widest data-[state=active]:bg-[#FF0000]/10 data-[state=active]:text-[#FF0000]">
+            Collection Data
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="opportunities" className="mt-4 space-y-3">
           {opportunities.length === 0 ? (
-            <p className="text-muted-foreground">No opportunities identified yet.</p>
+            <p className="text-[#888899]">No opportunities identified yet.</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {opportunities
@@ -125,85 +126,77 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
 
         <TabsContent value="tensions" className="mt-4 space-y-3">
           {tensions.length === 0 ? (
-            <p className="text-muted-foreground">No tensions identified yet.</p>
+            <p className="text-[#888899]">No tensions identified yet.</p>
           ) : (
             tensions
               .sort((a, b) => b.severity - a.severity)
               .map((tension, i) => (
-                <Card key={i}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{tension.name}</CardTitle>
-                      <Badge
-                        variant="secondary"
-                        className={
-                          tension.severity >= 7
-                            ? 'bg-red-500/10 text-red-500'
-                            : tension.severity >= 4
-                              ? 'bg-amber-500/10 text-amber-500'
-                              : 'bg-blue-500/10 text-blue-500'
-                        }
-                      >
-                        Severity: {tension.severity}/10
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-sm text-muted-foreground">{tension.description}</p>
-                    <div className="flex gap-1">
-                      {tension.platforms.map((p) => (
-                        <Badge key={p} variant="outline" className="text-[10px]">{p}</Badge>
+                <div key={i} className="border border-[#2a2a38] bg-[#111118] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold uppercase tracking-wide">{tension.name}</h3>
+                    <Badge
+                      variant="outline"
+                      className={
+                        tension.severity >= 7
+                          ? 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10'
+                          : tension.severity >= 4
+                            ? 'border-amber-500 text-amber-400 bg-amber-500/10'
+                            : 'border-blue-500 text-blue-400 bg-blue-500/10'
+                      }
+                    >
+                      Severity: {tension.severity}/10
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-[#888899]">{tension.description}</p>
+                  <div className="flex gap-1">
+                    {tension.platforms.map((p) => (
+                      <span key={p} className="border border-[#2a2a38] px-2 py-0.5 text-[10px] font-mono uppercase text-[#888899]">{p}</span>
+                    ))}
+                  </div>
+                  <div className="border border-[#2a2a38] bg-[#0a0a0f] p-3">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Brand Implication</p>
+                    <p className="mt-1 text-sm text-[#e8e8e8]">{tension.brand_implication}</p>
+                  </div>
+                  {tension.evidence.length > 0 && (
+                    <ul className="space-y-0.5">
+                      {tension.evidence.map((e, j) => (
+                        <li key={j} className="text-xs text-[#888899]">&bull; {e}</li>
                       ))}
-                    </div>
-                    <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs font-medium">Brand Implication</p>
-                      <p className="text-sm text-muted-foreground">{tension.brand_implication}</p>
-                    </div>
-                    {tension.evidence.length > 0 && (
-                      <ul className="space-y-0.5">
-                        {tension.evidence.map((e, j) => (
-                          <li key={j} className="text-xs text-muted-foreground">&bull; {e}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
+                    </ul>
+                  )}
+                </div>
               ))
           )}
         </TabsContent>
 
         <TabsContent value="brief" className="mt-4">
           {strategicBrief ? (
-            <Card>
-              <CardContent className="prose prose-sm dark:prose-invert max-w-none pt-6">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{strategicBrief}</ReactMarkdown>
-              </CardContent>
-            </Card>
+            <div className="border border-[#2a2a38] bg-[#111118] p-6 prose prose-sm prose-invert max-w-none prose-headings:uppercase prose-headings:tracking-widest prose-headings:text-white prose-p:text-[#888899] prose-strong:text-white prose-li:text-[#888899]">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{strategicBrief}</ReactMarkdown>
+            </div>
           ) : (
-            <p className="text-muted-foreground">Strategic brief not yet generated.</p>
+            <p className="text-[#888899]">Strategic brief not yet generated.</p>
           )}
         </TabsContent>
 
         <TabsContent value="data" className="mt-4 space-y-3">
           {results.length === 0 ? (
-            <p className="text-muted-foreground">No data collected yet.</p>
+            <p className="text-[#888899]">No data collected yet.</p>
           ) : (
             results.map((r) => (
-              <Card key={r.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm capitalize">
-                      {r.source_platform} — {r.layer}
-                    </CardTitle>
-                    <Badge variant="secondary">{r.item_count} items</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">
-                    Collected {new Date(r.created_at).toLocaleString()}
-                  </p>
-                </CardContent>
-              </Card>
+              <div key={r.id} className="border border-[#2a2a38] bg-[#111118] p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold uppercase tracking-wide">
+                    {r.source_platform} — {r.layer}
+                  </span>
+                  <span className="border border-[#FF4400]/50 bg-[#FF4400]/10 px-2 py-0.5 text-xs font-mono text-[#FF4400]">
+                    {r.item_count} items
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-[#888899]">
+                  Collected {new Date(r.created_at).toLocaleString()}
+                </p>
+              </div>
             ))
           )}
         </TabsContent>
@@ -212,13 +205,11 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
   );
 }
 
-function StatCard({ label, value, className }: { label: string; value: number; className?: string }) {
+function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <Card>
-      <CardContent className="pt-4 text-center">
-        <p className={`text-2xl font-bold ${className || ''}`}>{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </CardContent>
-    </Card>
+    <div className="border border-[#2a2a38] bg-[#111118] p-4 text-center">
+      <p className={`text-2xl font-bold font-mono ${accent ? 'text-[#FF4400]' : 'text-white'}`}>{value}</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">{label}</p>
+    </div>
   );
 }

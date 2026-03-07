@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifyGatewayJWT } from '@/lib/gateway-jwt';
 
-const GATEWAY_URL = process.env.GATEWAY_URL || 'https://aiden.services';
+const GATEWAY_URL = process.env.GATEWAY_URL || 'https://www.aiden.services';
 
 const PUBLIC_ROUTES = ['/api/auth', '/_next', '/favicon.ico'];
+
+const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,7 +18,13 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get('aiden-gw')?.value;
   if (token) {
     const user = await verifyGatewayJWT(token);
-    if (user) return NextResponse.next();
+    if (user) {
+      // Check email allowlist
+      if (ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
+        return new NextResponse('Access denied', { status: 403 });
+      }
+      return NextResponse.next();
+    }
   }
 
   // Tier 2: Try Gateway session endpoint (forwards sb-* cookies)
@@ -38,8 +46,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Tier 3: Redirect to Gateway login
-  const currentUrl = request.nextUrl.toString();
-  const loginUrl = `${GATEWAY_URL}/login?redirectTo=${encodeURIComponent(currentUrl)}`;
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'localhost';
+  const currentUrl = `${proto}://${host}${pathname}`;
+  const loginUrl = `${GATEWAY_URL}/login?next=${encodeURIComponent(currentUrl)}`;
   return NextResponse.redirect(loginUrl);
 }
 

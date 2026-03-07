@@ -13,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'CultureWire',
-  description: 'AI-powered cultural intelligence platform',
+  title: 'AIDEN // Listen',
+  description: 'Cultural intelligence platform',
 };
 
 export default async function RootLayout({
@@ -25,8 +25,8 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased bg-[#0a0a0f] text-[#e8e8e8]`}>
         <ThemeProvider>
           <TooltipProvider>
             <NavHeader email={session?.email ?? null} />

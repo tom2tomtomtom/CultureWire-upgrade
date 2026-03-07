@@ -1,6 +1,5 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,22 +20,22 @@ export function ExportMenu({ searchId }: ExportMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Download className="mr-2 h-4 w-4" />
+        <button className="flex items-center gap-2 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF0000] hover:text-[#FF0000]">
+          <Download className="h-3.5 w-3.5" />
           Export
-        </Button>
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem onClick={() => handleExport('csv')}>
-          <Table className="mr-2 h-4 w-4" />
+      <DropdownMenuContent className="border-[#2a2a38] bg-[#111118]">
+        <DropdownMenuItem onClick={() => handleExport('csv')} className="text-xs uppercase tracking-wider">
+          <Table className="mr-2 h-3.5 w-3.5" />
           CSV
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport('json')}>
-          <FileJson className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={() => handleExport('json')} className="text-xs uppercase tracking-wider">
+          <FileJson className="mr-2 h-3.5 w-3.5" />
           JSON
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport('markdown')}>
-          <FileText className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={() => handleExport('markdown')} className="text-xs uppercase tracking-wider">
+          <FileText className="mr-2 h-3.5 w-3.5" />
           Markdown
         </DropdownMenuItem>
       </DropdownMenuContent>

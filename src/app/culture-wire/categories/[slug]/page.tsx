@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getCategoryBySlug } from '@/lib/culture-wire/categories';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Zap, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import type { CultureWireSearch } from '@/lib/types';
 
 const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram'] as const;
@@ -23,7 +21,6 @@ export default function CategoryResultsPage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
 
   useEffect(() => {
-    // Load past category searches for this slug
     fetch('/api/culture-wire')
       .then((r) => r.json())
       .then((data) => {
@@ -39,11 +36,14 @@ export default function CategoryResultsPage() {
   if (!category) {
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground">Category not found.</p>
-        <Button variant="outline" onClick={() => router.push('/culture-wire/categories')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+        <p className="text-[#888899]">Category not found.</p>
+        <button
+          onClick={() => router.push('/culture-wire/categories')}
+          className="flex items-center gap-2 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] hover:border-[#FF0000] hover:text-[#FF0000]"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
           Back to categories
-        </Button>
+        </button>
       </div>
     );
   }
@@ -84,93 +84,100 @@ export default function CategoryResultsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Button variant="ghost" size="sm" onClick={() => router.push('/culture-wire/categories')} className="mb-2">
-          <ArrowLeft className="mr-1 h-3 w-3" />
+        <button
+          onClick={() => router.push('/culture-wire/categories')}
+          className="mb-2 flex items-center gap-1 text-xs text-[#888899] hover:text-[#FF0000] transition-colors"
+        >
+          <ArrowLeft className="h-3 w-3" />
           Categories
-        </Button>
-        <h1 className="text-2xl font-bold">{category.name}</h1>
-        <p className="mt-1 text-muted-foreground">
+        </button>
+        <h1 className="text-2xl font-bold uppercase tracking-tight">
+          <span className="text-[#FF0000]">//</span> {category.name}
+        </h1>
+        <p className="mt-1 text-sm font-mono text-[#888899]">
           {category.group} &middot; {category.geo_scope.toUpperCase()} &middot; {category.keywords.length} search terms
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Search Terms</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="border border-[#2a2a38] bg-[#111118]">
+        <div className="border-b border-[#2a2a38] px-4 py-3">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[#888899]">Search Terms</h3>
+        </div>
+        <div className="p-4">
           <div className="flex flex-wrap gap-1.5">
             {category.keywords.map((kw) => (
-              <Badge key={kw} variant="secondary" className="text-xs">
+              <span key={kw} className="border border-[#2a2a38] bg-[#0a0a0f] px-2 py-0.5 text-xs font-mono text-[#888899]">
                 {kw}
-              </Badge>
+              </span>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Run Category Search
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="border border-[#2a2a38] bg-[#111118]">
+        <div className="border-b border-[#2a2a38] px-4 py-3">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-[#888899]">Run Category Search</h3>
+        </div>
+        <div className="p-4 space-y-4">
           <div>
-            <p className="mb-1.5 text-sm font-medium">Platforms</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#888899]">Platforms</p>
             <div className="flex gap-1">
               {PLATFORMS.map((p) => (
-                <Badge
+                <button
                   key={p}
-                  variant={platforms.includes(p) ? 'default' : 'outline'}
-                  className="cursor-pointer select-none"
+                  type="button"
                   onClick={() => !loading && togglePlatform(p)}
+                  className={`border px-2.5 py-1 text-xs uppercase transition-colors ${
+                    platforms.includes(p)
+                      ? 'border-[#FF4400]/50 bg-[#FF4400]/10 text-[#FF4400]'
+                      : 'border-[#2a2a38] text-[#555566] hover:text-[#888899]'
+                  }`}
                 >
                   {p}
-                </Badge>
+                </button>
               ))}
             </div>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-[#FF0000]">{error}</p>}
 
-          <Button onClick={handleSearch} disabled={loading || platforms.length === 0}>
+          <button
+            onClick={handleSearch}
+            disabled={loading || platforms.length === 0}
+            className="border-2 border-[#FF0000] bg-[#FF0000] px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#FF0000]/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
             {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Starting...
-              </>
+              </span>
             ) : (
-              <>
-                <Zap className="mr-2 h-4 w-4" />
-                Search {category.name}
-              </>
+              `Search ${category.name}`
             )}
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
+        </div>
+      </div>
 
       {!loadingHistory && pastSearches.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Previous Searches</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-[#888899]">Previous Searches</h2>
           <div className="grid gap-2">
             {pastSearches.map((search) => (
-              <Card
+              <div
                 key={search.id}
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                className="cursor-pointer border border-[#2a2a38] bg-[#111118] p-4 transition-colors hover:border-[#FF0000]/50"
                 onClick={() => router.push(`/culture-wire/${search.id}`)}
               >
-                <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center justify-between">
                   <div className="text-sm">
-                    <p className="font-medium">{search.brand_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(search.created_at).toLocaleDateString()} &middot; {search.platforms.join(', ')}
+                    <p className="font-bold uppercase tracking-wide">{search.brand_name}</p>
+                    <p className="mt-1 text-xs font-mono text-[#888899]">
+                      {new Date(search.created_at).toLocaleDateString()} &middot; {search.platforms.join(' / ')}
                     </p>
                   </div>
-                  <Badge variant="secondary">{search.status}</Badge>
-                </CardContent>
-              </Card>
+                  <Badge variant="outline" className="border-[#2a2a38] text-[#888899]">{search.status}</Badge>
+                </div>
+              </div>
             ))}
           </div>
         </div>

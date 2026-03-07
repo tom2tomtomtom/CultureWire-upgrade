@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,33 +37,37 @@ export function UserMenu({ email }: { email: string | null }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary/10 relative">
-          <span className="text-xs font-medium">{initials}</span>
+        <button className="relative flex h-8 w-8 items-center justify-center border border-[#2a2a38] bg-[#111118] text-xs font-bold font-mono text-[#888899] transition-colors hover:border-[#FF0000] hover:text-[#FF0000]">
+          {initials}
           {admin && (
-            <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-yellow-500 border-2 border-background" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-[#FF4400] border border-[#0a0a0f]" />
           )}
-        </Button>
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled className="text-xs text-muted-foreground">
+      <DropdownMenuContent align="end" className="border-[#2a2a38] bg-[#111118]">
+        <DropdownMenuItem disabled className="text-xs text-[#888899]">
           <User className="mr-2 h-3 w-3" />
           {email}
-          {admin && <Badge variant="outline" className="ml-2 text-[10px] px-1 py-0">Admin</Badge>}
+          {admin && (
+            <span className="ml-2 border border-[#FF4400]/50 bg-[#FF4400]/10 px-1 py-0 text-[10px] text-[#FF4400]">
+              Admin
+            </span>
+          )}
         </DropdownMenuItem>
         {admin && (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
+            <DropdownMenuSeparator className="bg-[#2a2a38]" />
+            <DropdownMenuItem asChild className="text-xs uppercase tracking-wider">
               <Link href="/admin">
-                <Shield className="mr-2 h-4 w-4" />
+                <Shield className="mr-2 h-3.5 w-3.5" />
                 Admin Dashboard
               </Link>
             </DropdownMenuItem>
           </>
         )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
+        <DropdownMenuSeparator className="bg-[#2a2a38]" />
+        <DropdownMenuItem onClick={handleLogout} className="text-xs uppercase tracking-wider text-[#FF0000]">
+          <LogOut className="mr-2 h-3.5 w-3.5" />
           Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

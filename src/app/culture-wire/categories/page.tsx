@@ -2,19 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 import { CATEGORY_GROUPS } from '@/lib/culture-wire/categories';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Grid3X3 } from 'lucide-react';
 
 const GROUP_COLORS: Record<string, string> = {
-  'Consumer & Lifestyle': 'bg-orange-500/10 text-orange-600',
-  'Travel & Transport': 'bg-blue-500/10 text-blue-600',
-  'Technology & Digital': 'bg-purple-500/10 text-purple-600',
-  'Health & Wellbeing': 'bg-green-500/10 text-green-600',
-  'Purpose & Sustainability': 'bg-emerald-500/10 text-emerald-600',
-  'Sports & Entertainment': 'bg-red-500/10 text-red-600',
-  'Business & Government': 'bg-slate-500/10 text-slate-600',
-  'Social & Reactive': 'bg-pink-500/10 text-pink-600',
+  'Consumer & Lifestyle': 'border-orange-500 text-orange-400 bg-orange-500/10',
+  'Travel & Transport': 'border-blue-500 text-blue-400 bg-blue-500/10',
+  'Technology & Digital': 'border-purple-500 text-purple-400 bg-purple-500/10',
+  'Health & Wellbeing': 'border-green-500 text-green-400 bg-green-500/10',
+  'Purpose & Sustainability': 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
+  'Sports & Entertainment': 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10',
+  'Business & Government': 'border-slate-400 text-slate-400 bg-slate-400/10',
+  'Social & Reactive': 'border-pink-500 text-pink-400 bg-pink-500/10',
 };
 
 export default function CategoriesPage() {
@@ -23,53 +21,50 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
-          <Grid3X3 className="h-6 w-6" />
-          Category Search
+        <h1 className="text-2xl font-bold uppercase tracking-tight">
+          <span className="text-[#FF0000]">//</span> Category Search
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-sm text-[#888899]">
           Browse trending content by category. Each category targets Australian social media with curated search terms.
         </p>
       </div>
 
       {CATEGORY_GROUPS.map((group) => (
         <div key={group.name} className="space-y-3">
-          <h2 className="text-lg font-semibold">{group.name}</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-[#888899]">{group.name}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {group.categories.map((cat) => (
-              <Card
+              <div
                 key={cat.slug}
-                className="cursor-pointer transition-all hover:shadow-md hover:bg-accent/50"
+                className="cursor-pointer border border-[#2a2a38] bg-[#111118] p-4 transition-colors hover:border-[#FF0000]/50"
                 onClick={() => router.push(`/culture-wire/categories/${cat.slug}`)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{cat.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {cat.keywords.length} search terms
-                      </p>
-                    </div>
-                    <Badge variant="secondary" className={GROUP_COLORS[group.name] || ''}>
-                      {cat.geo_scope.toUpperCase()}
-                    </Badge>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-bold uppercase tracking-wide">{cat.name}</p>
+                    <p className="mt-1 text-xs font-mono text-[#888899]">
+                      {cat.keywords.length} search terms
+                    </p>
                   </div>
-                  {cat.clients.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {cat.clients.slice(0, 3).map((client) => (
-                        <Badge key={client} variant="outline" className="text-[10px]">
-                          {client}
-                        </Badge>
-                      ))}
-                      {cat.clients.length > 3 && (
-                        <Badge variant="outline" className="text-[10px]">
-                          +{cat.clients.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  <span className={`border px-2 py-0.5 text-[10px] font-mono uppercase ${GROUP_COLORS[group.name] || 'border-[#2a2a38] text-[#888899]'}`}>
+                    {cat.geo_scope.toUpperCase()}
+                  </span>
+                </div>
+                {cat.clients.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {cat.clients.slice(0, 3).map((client) => (
+                      <span key={client} className="border border-[#2a2a38] px-1.5 py-0.5 text-[10px] font-mono text-[#555566]">
+                        {client}
+                      </span>
+                    ))}
+                    {cat.clients.length > 3 && (
+                      <span className="border border-[#2a2a38] px-1.5 py-0.5 text-[10px] font-mono text-[#555566]">
+                        +{cat.clients.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>

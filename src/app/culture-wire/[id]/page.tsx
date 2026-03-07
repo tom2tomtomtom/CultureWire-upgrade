@@ -4,10 +4,19 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { SearchProgress } from '@/components/culture-wire/search-progress';
 import { ResultsView } from '@/components/culture-wire/results-view';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Zap } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { CultureWireSearch, CultureWireResult, CultureWireAnalysis } from '@/lib/types';
+
+function statusColor(status: string) {
+  switch (status) {
+    case 'collecting': return 'border-blue-500 text-blue-400 bg-blue-500/10';
+    case 'analyzing': return 'border-amber-500 text-amber-400 bg-amber-500/10';
+    case 'complete': return 'border-green-500 text-green-400 bg-green-500/10';
+    case 'failed': return 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10';
+    default: return 'border-[#2a2a38] text-[#888899]';
+  }
+}
 
 export default function CultureWireDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,10 +43,8 @@ export default function CultureWireDetailPage() {
     fetchData();
   }, [fetchData]);
 
-  // Poll while in-progress
   useEffect(() => {
     if (!search || search.status === 'complete' || search.status === 'failed') return;
-
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [search, fetchData]);
@@ -45,65 +52,53 @@ export default function CultureWireDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#888899]" />
       </div>
     );
   }
 
   if (!search) {
-    return <p className="py-10 text-center text-muted-foreground">Search not found.</p>;
+    return <p className="py-10 text-center text-[#888899]">Search not found.</p>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Zap className="h-6 w-6" />
-            {search.brand_name}
+          <h1 className="text-2xl font-bold uppercase tracking-tight">
+            <span className="text-[#FF0000]">//</span> {search.brand_name}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {search.geo} &middot; {search.platforms.join(', ')} &middot;{' '}
+          <p className="mt-1 text-sm font-mono text-[#888899]">
+            {search.geo} &middot; {search.platforms.join(' / ')} &middot;{' '}
             {new Date(search.created_at).toLocaleString()}
           </p>
         </div>
-        <Badge
-          variant="secondary"
-          className={
-            search.status === 'complete'
-              ? 'bg-green-500/10 text-green-500'
-              : search.status === 'failed'
-                ? 'bg-red-500/10 text-red-500'
-                : 'bg-blue-500/10 text-blue-500'
-          }
-        >
+        <Badge variant="outline" className={statusColor(search.status)}>
           {search.status}
         </Badge>
       </div>
 
       {search.brand_context && (
-        <Card>
-          <CardContent className="pt-4">
-            <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-              <div>
-                <p className="font-medium">Category</p>
-                <p className="text-muted-foreground">{search.brand_context.category}</p>
-              </div>
-              <div>
-                <p className="font-medium">Tone</p>
-                <p className="text-muted-foreground">{search.brand_context.tone}</p>
-              </div>
-              <div>
-                <p className="font-medium">Values</p>
-                <p className="text-muted-foreground">{search.brand_context.brand_values.join(', ')}</p>
-              </div>
-              <div>
-                <p className="font-medium">Competitors</p>
-                <p className="text-muted-foreground">{search.brand_context.competitors.join(', ')}</p>
-              </div>
+        <div className="border border-[#2a2a38] bg-[#111118] p-4">
+          <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Category</p>
+              <p className="mt-1 text-white">{search.brand_context.category}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Tone</p>
+              <p className="mt-1 text-white">{search.brand_context.tone}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Values</p>
+              <p className="mt-1 text-white">{search.brand_context.brand_values.join(', ')}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Competitors</p>
+              <p className="mt-1 text-white">{search.brand_context.competitors.join(', ')}</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {(search.status === 'collecting' || search.status === 'analyzing') && (
@@ -115,16 +110,14 @@ export default function CultureWireDetailPage() {
       )}
 
       {search.status === 'failed' && (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-destructive">Search failed. Please try again.</p>
-            {search.result_summary && 'error' in search.result_summary && (
-              <p className="mt-2 text-sm text-muted-foreground">
-                {String(search.result_summary.error)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="border border-[#FF0000]/30 bg-[#FF0000]/5 p-8 text-center">
+          <p className="text-[#FF0000] font-bold uppercase tracking-widest">Search failed. Please try again.</p>
+          {search.result_summary && 'error' in search.result_summary && (
+            <p className="mt-2 text-sm text-[#888899]">
+              {String(search.result_summary.error)}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
