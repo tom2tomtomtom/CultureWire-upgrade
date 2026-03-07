@@ -45,7 +45,7 @@ export default function CultureWireDetailPage() {
 
   useEffect(() => {
     if (!search || search.status === 'complete' || search.status === 'failed') return;
-    const interval = setInterval(fetchData, 5000);
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, [search, fetchData]);
 
@@ -105,7 +105,8 @@ export default function CultureWireDetailPage() {
         <SearchProgress search={search} results={results} />
       )}
 
-      {(search.status === 'complete' || analyses.length > 0) && (
+      {/* Show results as soon as any data exists, not just when complete */}
+      {(search.status === 'complete' || results.length > 0 || analyses.length > 0) && (
         <ResultsView search={search} results={results} analyses={analyses} />
       )}
 
