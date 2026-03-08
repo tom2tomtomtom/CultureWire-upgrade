@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { SamplePostCard, type SamplePost } from '@/components/sample-post-card';
 import type { ScoredOpportunity } from '@/lib/types';
 
 const tierStyles = {
@@ -18,10 +21,12 @@ const rtpStyles = {
 interface OpportunityCardProps {
   opportunity: ScoredOpportunity;
   rank: number;
+  samplePosts?: SamplePost[];
 }
 
-export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
+export function OpportunityCard({ opportunity, rank, samplePosts }: OpportunityCardProps) {
   const { title, description, tier, score, components, right_to_play, evidence, platform, layer } = opportunity;
+  const [showPosts, setShowPosts] = useState(false);
 
   return (
     <div className="border border-[#2a2a38] bg-[#111118] overflow-hidden">
@@ -72,6 +77,25 @@ export function OpportunityCard({ opportunity, rank }: OpportunityCardProps) {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {samplePosts && samplePosts.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowPosts(!showPosts)}
+              className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-[#FF4400] hover:text-[#FF6633] transition-colors"
+            >
+              <ChevronDown className={`h-3 w-3 transition-transform ${showPosts ? 'rotate-180' : ''}`} />
+              Sample Posts ({samplePosts.length})
+            </button>
+            {showPosts && (
+              <div className="mt-2 space-y-2">
+                {samplePosts.map((post, i) => (
+                  <SamplePostCard key={i} post={post} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

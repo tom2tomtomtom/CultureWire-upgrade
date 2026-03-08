@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { OpportunityCard } from './opportunity-card';
 import { ExportMenu } from './export-menu';
-import { Loader2, Microscope } from 'lucide-react';
+import { SamplePostCard, extractSamplePosts, findMatchingPosts, type SamplePost } from '@/components/sample-post-card';
+import { ChevronDown, Loader2, Microscope } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
       setDeepDiveLoading(false);
     }
   }
+
   const opportunities = useMemo(() => {
     const analysis = analyses.find((a) => a.analysis_type === 'opportunities');
     if (!analysis) return [];
@@ -63,9 +65,54 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
     return content.brief || null;
   }, [analyses]);
 
+  // Build a map of platform -> all raw data items for matching
+  const rawDataByPlatform = useMemo(() => {
+    const map: Record<string, Record<string, unknown>[]> = {};
+    for (const r of results) {
+      if (!map[r.source_platform]) map[r.source_platform] = [];
+      map[r.source_platform].push(...r.raw_data);
+    }
+    return map;
+  }, [results]);
+
+  // Pre-compute sample posts for each opportunity
+  const opportunitySamplePosts = useMemo(() => {
+    const map = new Map<number, SamplePost[]>();
+    opportunities.forEach((opp, idx) => {
+      const platformData = rawDataByPlatform[opp.platform] || [];
+      if (platformData.length === 0) return;
+      const matched = findMatchingPosts(platformData, opp.platform, opp.evidence, 2);
+      if (matched.length > 0) {
+        map.set(idx, matched);
+      } else {
+        // Fall back to top posts from this platform
+        const top = extractSamplePosts(platformData, opp.platform, 2);
+        if (top.length > 0) map.set(idx, top);
+      }
+    });
+    return map;
+  }, [opportunities, rawDataByPlatform]);
+
+  // Pre-compute sample posts for each tension
+  const tensionSamplePosts = useMemo(() => {
+    const map = new Map<number, SamplePost[]>();
+    tensions.forEach((tension, idx) => {
+      const allPosts: SamplePost[] = [];
+      for (const platform of tension.platforms) {
+        const platformData = rawDataByPlatform[platform] || [];
+        if (platformData.length === 0) continue;
+        const matched = findMatchingPosts(platformData, platform, tension.evidence, 2);
+        allPosts.push(...matched);
+      }
+      if (allPosts.length > 0) {
+        map.set(idx, allPosts.slice(0, 3));
+      }
+    });
+    return map;
+  }, [tensions, rawDataByPlatform]);
+
   const totalItems = results.reduce((sum, r) => sum + r.item_count, 0);
   const goldCount = opportunities.filter((o) => o.tier === 'GOLD').length;
-  const silverCount = opportunities.filter((o) => o.tier === 'SILVER').length;
 
   return (
     <div className="space-y-6">
@@ -118,7 +165,12 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
               {opportunities
                 .sort((a, b) => b.score - a.score)
                 .map((opp, i) => (
-                  <OpportunityCard key={i} opportunity={opp} rank={i + 1} />
+                  <OpportunityCard
+                    key={i}
+                    opportunity={opp}
+                    rank={i + 1}
+                    samplePosts={opportunitySamplePosts.get(i)}
+                  />
                 ))}
             </div>
           )}
@@ -131,40 +183,7 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
             tensions
               .sort((a, b) => b.severity - a.severity)
               .map((tension, i) => (
-                <div key={i} className="border border-[#2a2a38] bg-[#111118] p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold uppercase tracking-wide">{tension.name}</h3>
-                    <Badge
-                      variant="outline"
-                      className={
-                        tension.severity >= 7
-                          ? 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10'
-                          : tension.severity >= 4
-                            ? 'border-amber-500 text-amber-400 bg-amber-500/10'
-                            : 'border-blue-500 text-blue-400 bg-blue-500/10'
-                      }
-                    >
-                      Severity: {tension.severity}/10
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-[#888899]">{tension.description}</p>
-                  <div className="flex gap-1">
-                    {tension.platforms.map((p) => (
-                      <span key={p} className="border border-[#2a2a38] px-2 py-0.5 text-[10px] font-mono uppercase text-[#888899]">{p}</span>
-                    ))}
-                  </div>
-                  <div className="border border-[#2a2a38] bg-[#0a0a0f] p-3">
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Brand Implication</p>
-                    <p className="mt-1 text-sm text-[#e8e8e8]">{tension.brand_implication}</p>
-                  </div>
-                  {tension.evidence.length > 0 && (
-                    <ul className="space-y-0.5">
-                      {tension.evidence.map((e, j) => (
-                        <li key={j} className="text-xs text-[#888899]">&bull; {e}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                <TensionCard key={i} tension={tension} samplePosts={tensionSamplePosts.get(i)} />
               ))
           )}
         </TabsContent>
@@ -184,23 +203,113 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
             <p className="text-[#888899]">No data collected yet.</p>
           ) : (
             results.map((r) => (
-              <div key={r.id} className="border border-[#2a2a38] bg-[#111118] p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold uppercase tracking-wide">
-                    {r.source_platform} — {r.layer}
-                  </span>
-                  <span className="border border-[#FF4400]/50 bg-[#FF4400]/10 px-2 py-0.5 text-xs font-mono text-[#FF4400]">
-                    {r.item_count} items
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-[#888899]">
-                  Collected {new Date(r.created_at).toLocaleString()}
-                </p>
-              </div>
+              <CollectionDataCard key={r.id} result={r} />
             ))
           )}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// --- Sub-components ---
+
+function TensionCard({ tension, samplePosts }: { tension: CulturalTension; samplePosts?: SamplePost[] }) {
+  const [showPosts, setShowPosts] = useState(false);
+
+  return (
+    <div className="border border-[#2a2a38] bg-[#111118] p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="font-bold uppercase tracking-wide">{tension.name}</h3>
+        <Badge
+          variant="outline"
+          className={
+            tension.severity >= 7
+              ? 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10'
+              : tension.severity >= 4
+                ? 'border-amber-500 text-amber-400 bg-amber-500/10'
+                : 'border-blue-500 text-blue-400 bg-blue-500/10'
+          }
+        >
+          Severity: {tension.severity}/10
+        </Badge>
+      </div>
+      <p className="text-sm text-[#888899]">{tension.description}</p>
+      <div className="flex gap-1">
+        {tension.platforms.map((p) => (
+          <span key={p} className="border border-[#2a2a38] px-2 py-0.5 text-[10px] font-mono uppercase text-[#888899]">{p}</span>
+        ))}
+      </div>
+      <div className="border border-[#2a2a38] bg-[#0a0a0f] p-3">
+        <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Brand Implication</p>
+        <p className="mt-1 text-sm text-[#e8e8e8]">{tension.brand_implication}</p>
+      </div>
+      {tension.evidence.length > 0 && (
+        <ul className="space-y-0.5">
+          {tension.evidence.map((e, j) => (
+            <li key={j} className="text-xs text-[#888899]">&bull; {e}</li>
+          ))}
+        </ul>
+      )}
+      {samplePosts && samplePosts.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowPosts(!showPosts)}
+            className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-[#FF4400] hover:text-[#FF6633] transition-colors"
+          >
+            <ChevronDown className={`h-3 w-3 transition-transform ${showPosts ? 'rotate-180' : ''}`} />
+            Sample Posts ({samplePosts.length})
+          </button>
+          {showPosts && (
+            <div className="mt-2 space-y-2">
+              {samplePosts.map((post, i) => (
+                <SamplePostCard key={i} post={post} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CollectionDataCard({ result }: { result: CultureWireResult }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const topPosts = useMemo(() => {
+    if (!expanded || !result.raw_data?.length) return [];
+    return extractSamplePosts(result.raw_data, result.source_platform, 5);
+  }, [expanded, result]);
+
+  return (
+    <div className="border border-[#2a2a38] bg-[#111118]">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-4 flex items-center justify-between hover:bg-[#15151f] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold uppercase tracking-wide">
+            {result.source_platform} — {result.layer}
+          </span>
+          <span className="border border-[#FF4400]/50 bg-[#FF4400]/10 px-2 py-0.5 text-xs font-mono text-[#FF4400]">
+            {result.item_count} items
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-[#888899]">
+            {new Date(result.created_at).toLocaleString()}
+          </p>
+          <ChevronDown className={`h-4 w-4 text-[#555566] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      {expanded && topPosts.length > 0 && (
+        <div className="border-t border-[#2a2a38] p-4 space-y-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Top Posts by Engagement</p>
+          {topPosts.map((post, i) => (
+            <SamplePostCard key={i} post={post} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
