@@ -263,6 +263,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const { projectId } = await request.json();
+  console.log('[plan] POST called for project:', projectId);
 
   if (!projectId) {
     return NextResponse.json({ error: 'projectId required' }, { status: 400 });
@@ -278,6 +279,8 @@ export async function POST(request: NextRequest) {
     .order('version', { ascending: false })
     .limit(1)
     .single();
+
+  console.log('[plan] Spec lookup:', spec ? `found (${spec.id})` : 'not found', specError?.message || '');
 
   if (specError || !spec) {
     return NextResponse.json({ error: 'No research spec found' }, { status: 404 });
@@ -307,6 +310,8 @@ export async function POST(request: NextRequest) {
     })
     .select()
     .single();
+
+  console.log('[plan] Insert result:', plan ? `success (${plan.id})` : 'failed', planError?.message || '');
 
   if (planError) {
     return NextResponse.json({ error: planError.message }, { status: 500 });
