@@ -151,9 +151,13 @@ export async function POST(request: NextRequest) {
               .single();
 
             if (spec) {
+              // Auto-title the project from the research objective
+              const title = specData.objective
+                ? specData.objective.slice(0, 100)
+                : 'Untitled Research';
               await supabase
                 .from('projects')
-                .update({ status: 'planning' })
+                .update({ status: 'planning', title })
                 .eq('id', projectId);
 
               controller.enqueue(
