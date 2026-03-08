@@ -116,12 +116,17 @@ export default function ProjectPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId }),
       });
-      if (!res.ok) throw new Error('Failed to generate plan');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        console.error('[plan] Generation failed:', res.status, errData);
+        throw new Error(errData?.error || 'Failed to generate plan');
+      }
       const data = await res.json();
       setPlan(data.plan);
       await loadProject();
-    } catch {
-      toast.error('Failed to generate research plan');
+    } catch (err) {
+      console.error('[plan] handleSpecGenerated error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to generate research plan');
     }
   };
 
