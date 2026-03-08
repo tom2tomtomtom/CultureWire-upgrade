@@ -288,9 +288,8 @@ ACTOR_REGISTRY.twitter = {
   defaults: { maxResults: 100, timeout: 180 },
 };
 
-// LinkedIn scraper requires paid rental on Apify — disabled until rented
-// To enable: rent actor at https://console.apify.com/actors/kfiWbq3boy3dWKbiL
-// Then uncomment and set id to 'curious_coder/linkedin-post-search-scraper'
+// LinkedIn: requires paid Apify rental — disabled
+// Rent at https://console.apify.com/actors/kfiWbq3boy3dWKbiL then add back
 
 ACTOR_REGISTRY.facebook = {
   id: 'apify/facebook-posts-scraper',
