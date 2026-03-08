@@ -24,6 +24,7 @@ export default function ProjectPage() {
   const [plan, setPlan] = useState<ExecutionPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const isSynthesizing = useRef(false);
 
   const loadProject = useCallback(async () => {
@@ -79,6 +80,11 @@ export default function ProjectPage() {
         (payload) => {
           const updated = payload.new as Project;
           setProject(updated);
+          // When status transitions to planning, reload the plan
+          // (the spec detection in chat route sets status before handleSpecGenerated runs)
+          if (updated.status === 'planning') {
+            loadPlan();
+          }
         }
       )
       .subscribe();
@@ -110,6 +116,7 @@ export default function ProjectPage() {
   }, [project?.status, projectId]);
 
   const handleSpecGenerated = async () => {
+    setIsGeneratingPlan(true);
     try {
       const res = await fetch('/api/plan', {
         method: 'POST',
@@ -127,6 +134,8 @@ export default function ProjectPage() {
     } catch (err) {
       console.error('[plan] handleSpecGenerated error:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to generate research plan');
+    } finally {
+      setIsGeneratingPlan(false);
     }
   };
 
@@ -213,7 +222,7 @@ export default function ProjectPage() {
 
   if (!project) return null;
 
-  const showChat = project.status === 'draft' || (project.status === 'planning' && !plan);
+  const showChat = project.status === 'draft' || (project.status === 'planning' && !plan && !isGeneratingPlan);
 
   return (
     <div className={showChat ? 'flex flex-col h-[calc(100vh-6rem)]' : 'space-y-6'}>
@@ -236,6 +245,16 @@ export default function ProjectPage() {
       {/* Draft: show chat */}
       {project.status === 'draft' && (
         <ChatInterface projectId={projectId} onSpecGenerated={handleSpecGenerated} />
+      )}
+
+      {/* Generating plan: show loading */}
+      {isGeneratingPlan && (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+            <p className="text-sm text-muted-foreground">Generating research plan...</p>
+          </div>
+        </div>
       )}
 
       {/* Planning: show plan for review */}
