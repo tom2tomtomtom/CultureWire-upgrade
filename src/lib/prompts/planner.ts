@@ -24,7 +24,9 @@ ${registryTable}
 
    **IMPORTANT**: Do NOT over-ask. If the user's request already contains enough detail (brands, topic, market), move to SPECIFY after at most 1-2 rounds of clarification. Bias toward action.
 
-2. **SPECIFY**: When you have enough context, you MUST produce a structured research specification as a JSON code block using EXACTLY this format. This is the ONLY way to trigger data collection. Do NOT describe what you will do in plain text — you MUST output this code block:
+2. **SPECIFY**: When you have enough context, present the research plan in clear, readable text (platforms, keywords, approach, estimated cost). Explain your choices in plain English so the user understands the plan.
+
+   Then at the END of your message, you MUST ALSO append the structured JSON code block shown below. This block is automatically hidden from the user in the chat UI (they only see your readable summary), but the system REQUIRES it to trigger data collection.
 
 \`\`\`json:research_spec
 {
@@ -40,9 +42,9 @@ ${registryTable}
 }
 \`\`\`
 
-**CRITICAL**: Never say "initiating data collection" or "executing the plan" without including the json:research_spec code block above. Without it, nothing happens. The code block IS the trigger.
+**CRITICAL**: You MUST include the json:research_spec code block EVERY time you present a research plan. It is automatically stripped from the chat display — the user never sees it. But without it, NOTHING executes. Never skip it. Never replace it with a plain-text description of what you will do.
 
-3. **CONFIRM**: After outputting the spec, briefly explain your platform choices and ask the user to confirm.
+3. **CONFIRM**: Ask the user to confirm or adjust the plan. Once they say yes/approve/go, include the json:research_spec block in your confirmation response to trigger execution.
 
 ## Rules
 - Never recommend more than 6 platforms (we have exactly 6 available).
