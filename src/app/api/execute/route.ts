@@ -5,6 +5,7 @@ import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect
 import { ExecuteRequestSchema, CancelExecutionSchema } from '@/lib/validators';
 import type { PlannedActorRun, ScrapeJob } from '@/lib/types';
 import { ACTOR_REGISTRY } from '@/lib/actor-registry';
+import { getSession } from '@/lib/auth/session';
 
 async function processJob(jobId: string, projectId: string, runId: string, platform: string) {
   const supabase = createAdminClient();
@@ -42,6 +43,11 @@ async function processJob(jobId: string, projectId: string, runId: string, platf
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body = await request.json();
   const parsed = ExecuteRequestSchema.safeParse(body);
 
@@ -51,6 +57,18 @@ export async function POST(request: NextRequest) {
 
   const { projectId, planId } = parsed.data;
   const supabase = await createServerClient();
+
+  // Verify project ownership
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', session.sub)
+    .single();
+
+  if (!project) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
 
   // Load plan
   const { data: plan, error: planError } = await supabase
@@ -207,6 +225,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body = await request.json();
   const parsed = CancelExecutionSchema.safeParse(body);
 

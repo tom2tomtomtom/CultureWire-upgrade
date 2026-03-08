@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth/session';
 import { runAnalysisPipeline } from '@/lib/culture-wire/analyzer';
 import type { BrandContext } from '@/lib/types';
 
@@ -7,6 +8,9 @@ export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { id } = await params;
   const supabase = await createServerClient();
 
@@ -14,6 +18,7 @@ export async function POST(
     .from('culture_wire_searches')
     .select('*')
     .eq('id', id)
+    .eq('user_id', session.sub)
     .single();
 
   if (error || !search) {

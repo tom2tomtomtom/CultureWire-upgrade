@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { callAnthropicWithFallback } from '@/lib/anthropic';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth/session';
 import { SynthesizeRequestSchema } from '@/lib/validators';
 import {
   buildPerSourcePrompt,
@@ -120,6 +121,11 @@ function extractBrandContext(rawOutput: string | null): string {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body = await request.json();
   const parsed = SynthesizeRequestSchema.safeParse(body);
 
@@ -129,6 +135,18 @@ export async function POST(request: NextRequest) {
 
   const { projectId } = parsed.data;
   const supabase = await createServerClient();
+
+  // Verify project belongs to authenticated user
+  const { data: projectCheck } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', session.sub)
+    .single();
+
+  if (!projectCheck) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
 
   // Validate spec and results exist before committing
   const { data: spec } = await supabase

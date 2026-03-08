@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth/session';
 
 /**
  * Debug endpoint: shows raw field names from scraped data.
  * GET /api/debug-data?projectId=xxx&platform=youtube&limit=2
  */
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const projectId = request.nextUrl.searchParams.get('projectId');
   const platform = request.nextUrl.searchParams.get('platform');
   const limit = Number(request.nextUrl.searchParams.get('limit') || '2');
@@ -15,6 +19,18 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+
+  // Verify project ownership
+  const { data: project } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', session.sub)
+    .single();
+
+  if (!project) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
 
   let query = supabase
     .from('scrape_results')

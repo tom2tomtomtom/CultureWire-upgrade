@@ -3,8 +3,14 @@ import { getAnthropicClient, MODEL_FALLBACK_ORDER } from '@/lib/anthropic';
 import { createServerClient } from '@/lib/supabase/server';
 import { ChatRequestSchema } from '@/lib/validators';
 import { buildPlannerSystemPrompt } from '@/lib/prompts/planner';
+import { getSession } from '@/lib/auth/session';
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
 
@@ -13,6 +19,19 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+
+  // Verify project belongs to authenticated user
+  const { data: projectCheck } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', session.sub)
+    .single();
+
+  if (!projectCheck) {
+    return Response.json({ error: 'Project not found' }, { status: 404 });
+  }
+
   const { data: messages } = await supabase
     .from('chat_messages')
     .select('*')
@@ -24,6 +43,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body = await request.json();
   const parsed = ChatRequestSchema.safeParse(body);
 
@@ -33,6 +57,19 @@ export async function POST(request: NextRequest) {
 
   const { projectId, message } = parsed.data;
   const supabase = await createServerClient();
+
+  // Verify project belongs to authenticated user
+  const { data: projectCheck } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', session.sub)
+    .single();
+
+  if (!projectCheck) {
+    return Response.json({ error: 'Project not found' }, { status: 404 });
+  }
+
   const anthropic = getAnthropicClient();
 
   // Save user message

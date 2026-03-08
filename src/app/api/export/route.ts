@@ -3,8 +3,14 @@ import { createServerClient } from '@/lib/supabase/server';
 import { ACTOR_REGISTRY } from '@/lib/actor-registry';
 import { buildHtmlDashboard } from '@/lib/dashboard';
 import type { Platform, ScrapeResult, AnalysisResult } from '@/lib/types';
+import { getSession } from '@/lib/auth/session';
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
   const format = searchParams.get('format') || 'csv';
@@ -14,6 +20,18 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createServerClient();
+
+  // Verify project ownership
+  const { data: ownedProject } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('user_id', session.sub)
+    .single();
+
+  if (!ownedProject) {
+    return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+  }
 
   const [projectRes, resultsRes, analysesRes] = await Promise.all([
     supabase.from('projects').select('title').eq('id', projectId).single(),

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
 import { extractTextFromPdf } from '@/lib/pdf';
+import { getSession } from '@/lib/auth/session';
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
   const projectId = formData.get('projectId') as string | null;
@@ -28,8 +34,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not extract text from PDF. The file may be image-based or empty.' }, { status: 422 });
     }
 
-    // Update project with parsed text
+    // Verify project ownership
     const supabase = await createServerClient();
+    const { data: ownedProject } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', session.sub)
+      .single();
+
+    if (!ownedProject) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    // Update project with parsed text
     const { error: updateError } = await supabase
       .from('projects')
       .update({
