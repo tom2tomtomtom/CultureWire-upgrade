@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { OpportunityCard } from './opportunity-card';
 import { ExportMenu } from './export-menu';
 import { SamplePostCard, extractSamplePosts, findMatchingPosts, type SamplePost } from '@/components/sample-post-card';
-import { ChevronDown, Loader2, Microscope } from 'lucide-react';
+import { ChevronDown, Loader2, Microscope, Share2 } from 'lucide-react';
+import { ShareDialog } from '@/components/share-dialog';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ interface ResultsViewProps {
 
 export function ResultsView({ search, results, analyses }: ResultsViewProps) {
   const [deepDiveLoading, setDeepDiveLoading] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   async function handleDeepDive() {
     setDeepDiveLoading(true);
@@ -130,6 +132,19 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
             <><Microscope className="h-3.5 w-3.5" />Deep Dive</>
           )}
         </button>
+        <button
+          onClick={() => setShareOpen(true)}
+          className="flex items-center gap-2 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF4400] hover:text-[#FF4400]"
+        >
+          <Share2 className="h-3.5 w-3.5" />Share
+        </button>
+        <ShareDialog
+          reportType="culture_wire"
+          reportId={search.id}
+          reportTitle={search.brand_name}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+        />
       </div>
 
       {/* Summary stats */}

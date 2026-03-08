@@ -7,16 +7,52 @@ import { runThreeLayerCollection } from '@/lib/culture-wire/collector';
 import { runAnalysisPipeline } from '@/lib/culture-wire/analyzer';
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const supabase = await createServerClient();
 
-  const { data: searches, error } = await supabase
+  // 1. Own searches
+  const { data: ownSearches, error: ownError } = await supabase
     .from('culture_wire_searches')
     .select('*')
+    .eq('user_id', session.sub)
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ searches: searches || [] });
+  if (ownError) return NextResponse.json({ error: ownError.message }, { status: 500 });
+
+  // 2. Searches shared with this user
+  const { data: sharedRecords } = await (supabase as any)
+    .from('report_shares')
+    .select('report_id')
+    .eq('report_type', 'culture_wire')
+    .eq('shared_with', session.sub);
+
+  const sharedIds = (sharedRecords || []).map((r: { report_id: string }) => r.report_id);
+
+  let sharedSearches: typeof ownSearches = [];
+  if (sharedIds.length > 0) {
+    const { data } = await supabase
+      .from('culture_wire_searches')
+      .select('*')
+      .in('id', sharedIds)
+      .order('created_at', { ascending: false });
+    sharedSearches = data || [];
+  }
+
+  // Merge and dedupe by id, sort by created_at desc
+  const mergedMap = new Map<string, (typeof ownSearches)[number]>();
+  for (const s of [...(ownSearches || []), ...(sharedSearches || [])]) {
+    if (!mergedMap.has(s.id)) mergedMap.set(s.id, s);
+  }
+  const searches = Array.from(mergedMap.values()).sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return NextResponse.json({ searches });
 }
 
 export async function POST(request: NextRequest) {

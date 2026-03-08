@@ -17,8 +17,18 @@ export interface Project {
   estimated_cost_cents: number | null;
   actual_cost_cents: number;
   sheets_url: string | null;
+  visibility?: 'private' | 'shared';
   created_at: string;
   updated_at: string;
+}
+
+export interface ReportShare {
+  id: string;
+  report_type: 'culture_wire' | 'research';
+  report_id: string;
+  shared_by: string;
+  shared_with: string;
+  created_at: string;
 }
 
 export interface ResearchSpec {
@@ -157,6 +167,7 @@ export interface CultureWireSearch {
   platforms: string[];
   status: CultureWireStatus;
   result_summary: ResultSummary | null;
+  visibility?: 'private' | 'shared';
   created_at: string;
   completed_at: string | null;
 }

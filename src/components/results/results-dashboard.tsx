@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, FileText, Globe, Loader2 } from 'lucide-react';
+import { Download, FileText, Globe, Loader2, Share2 } from 'lucide-react';
+import { ShareDialog } from '@/components/share-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { StrategicSummary } from './strategic-summary';
@@ -13,6 +14,7 @@ import type { AnalysisResult, Platform, ScrapeResult } from '@/lib/types';
 
 interface ResultsDashboardProps {
   projectId: string;
+  projectTitle?: string;
   sheetsUrl?: string | null;
 }
 
@@ -21,11 +23,12 @@ function platformDisplayName(key: string): string {
   return entry?.displayName || key;
 }
 
-export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
+export function ResultsDashboard({ projectId, projectTitle }: ResultsDashboardProps) {
   const [results, setResults] = useState<ScrapeResult[]>([]);
   const [analyses, setAnalyses] = useState<AnalysisResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -141,6 +144,21 @@ export function ResultsDashboard({ projectId }: ResultsDashboardProps) {
             )}
             Dashboard
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 className="mr-2 h-3 w-3" />
+            Share
+          </Button>
+          <ShareDialog
+            reportType="research"
+            reportId={projectId}
+            reportTitle={projectTitle || 'Research Report'}
+            open={shareOpen}
+            onOpenChange={setShareOpen}
+          />
         </div>
       </div>
 
