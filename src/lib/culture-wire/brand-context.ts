@@ -23,7 +23,8 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
   "subcategory": "More specific niche",
   "brand_values": ["3-5 core brand values"],
   "brand_pillars": ["3-5 strategic pillars the brand is known for"],
-  "tone": "Brand's communication tone in 2-3 words",
+  "brand_positioning": "One sentence: how the brand positions itself vs competitors (e.g., 'The affordable premium option for health-conscious millennials')",
+  "tone": "Brand's communication tone in 2-3 descriptive words (e.g., 'playful, irreverent', 'premium, authoritative', 'warm, community-driven')",
   "competitors": ["5-7 direct competitors that actually operate in ${market} - do NOT include competitors that don't have a presence in this market"],
   "keywords": {
     "brand": ["5-8 brand-specific search terms including brand name, slogans, products, campaigns relevant to ${market}"],

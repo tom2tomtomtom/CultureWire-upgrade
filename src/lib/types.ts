@@ -200,6 +200,7 @@ export interface BrandContext {
   subcategory: string;
   brand_values: string[];
   brand_pillars: string[];
+  brand_positioning?: string;
   tone: string;
   competitors: string[];
   keywords: {

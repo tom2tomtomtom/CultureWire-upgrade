@@ -40,7 +40,7 @@ Focus on: current status, recent developments, audience demographics, brand impl
       body: JSON.stringify({
         model: 'sonar',
         messages: [
-          { role: 'system', content: 'You are a cultural intelligence analyst. Provide concise, factual context about trends and cultural moments. Include specific data points and recent developments.' },
+          { role: 'system', content: 'You are a cultural intelligence analyst. Provide concise, factual context about trends and cultural moments. Focus on Australian/local market context where relevant. Cite sources. Include specific dates, numbers, and names. No vague generalities.' },
           { role: 'user', content: query },
         ],
         max_tokens: 1024,
