@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Grid3X3, Users } from 'lucide-react';
+import { Search, Grid3X3, Users, MessageSquare } from 'lucide-react';
 import { UserMenu } from '@/components/auth/user-menu';
 import { ApifyCreditBadge } from '@/components/layout/apify-credit-badge';
 import { cn } from '@/lib/utils';
@@ -65,6 +65,18 @@ export function NavHeader({ email }: { email: string | null }) {
             >
               <Grid3X3 className="h-3.5 w-3.5" />
               Categories
+            </Link>
+            <Link
+              href="/project/new"
+              className={cn(
+                'flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-colors',
+                pathname.startsWith('/project')
+                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
+                  : 'border-transparent text-[#888899] hover:text-white hover:border-[#2a2a38]'
+              )}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Research
             </Link>
             <Link
               href="/culture-wire/influencers"
