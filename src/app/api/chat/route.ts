@@ -125,6 +125,11 @@ export async function POST(request: NextRequest) {
         const specMatch = fullResponse.match(
           /```json:research_spec\n([\s\S]*?)\n```/
         );
+        console.log('[chat] Spec block found:', !!specMatch);
+        if (!specMatch) {
+          // Log last 500 chars to see what Claude actually output
+          console.log('[chat] Response tail:', fullResponse.slice(-500));
+        }
         if (specMatch) {
           try {
             const specData = JSON.parse(specMatch[1]);
@@ -157,8 +162,8 @@ export async function POST(request: NextRequest) {
                 )
               );
             }
-          } catch {
-            // Spec parsing failed, continue
+          } catch (specErr) {
+            console.error('[chat] Spec parsing/insert failed:', specErr);
           }
         }
 
