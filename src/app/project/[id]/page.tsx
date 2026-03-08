@@ -94,6 +94,12 @@ export default function ProjectPage() {
     };
   }, [projectId]);
 
+  // Auto-generate plan when project is in planning but no plan exists
+  useEffect(() => {
+    if (!project || project.status !== 'planning' || plan || isGeneratingPlan) return;
+    handleSpecGenerated();
+  }, [project?.status, plan, isGeneratingPlan]);
+
   // Polling fallback during executing/synthesizing (every 10s)
   useEffect(() => {
     if (!project) return;
@@ -266,9 +272,14 @@ export default function ProjectPage() {
         />
       )}
 
-      {/* Planning but no plan yet: show chat to continue */}
-      {project.status === 'planning' && !plan && (
-        <ChatInterface projectId={projectId} onSpecGenerated={handleSpecGenerated} />
+      {/* Planning but no plan yet: show loading while plan generates, or chat if user navigated back */}
+      {project.status === 'planning' && !plan && !isGeneratingPlan && (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center space-y-3">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto" />
+            <p className="text-sm text-muted-foreground">Generating research plan...</p>
+          </div>
+        </div>
       )}
 
       {/* Executing: show live progress */}
