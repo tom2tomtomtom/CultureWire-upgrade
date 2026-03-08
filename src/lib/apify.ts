@@ -15,9 +15,10 @@ export async function getApifyCreditBalance(): Promise<ApifyCreditInfo | null> {
   if (!apiKey) return null;
 
   try {
+    const apifyHeaders = { Authorization: `Bearer ${apiKey}` };
     const [userRes, usageRes] = await Promise.all([
-      fetch(`${APIFY_BASE}/users/me?token=${apiKey}`),
-      fetch(`${APIFY_BASE}/users/me/usage/monthly?token=${apiKey}`),
+      fetch(`${APIFY_BASE}/users/me`, { headers: apifyHeaders }),
+      fetch(`${APIFY_BASE}/users/me/usage/monthly`, { headers: apifyHeaders }),
     ]);
     if (!userRes.ok) return null;
 
@@ -182,10 +183,13 @@ export async function startActorRun(
 ): Promise<{ runId: string }> {
   const encodedActorId = actorId.replace('/', '~');
   const response = await fetch(
-    `${APIFY_BASE}/acts/${encodedActorId}/runs?token=${process.env.APIFY_API_KEY}`,
+    `${APIFY_BASE}/acts/${encodedActorId}/runs`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.APIFY_API_KEY}`,
+      },
       body: JSON.stringify(input),
     }
   );
@@ -199,7 +203,8 @@ export async function startActorRun(
 
 export async function getRunStatus(runId: string): Promise<ApifyRunResult> {
   const response = await fetch(
-    `${APIFY_BASE}/actor-runs/${runId}?token=${process.env.APIFY_API_KEY}`
+    `${APIFY_BASE}/actor-runs/${runId}`,
+    { headers: { Authorization: `Bearer ${process.env.APIFY_API_KEY}` } }
   );
   if (!response.ok) throw new Error(`Apify status failed: ${response.status}`);
   const data = await response.json();
@@ -211,7 +216,8 @@ export async function getDatasetItems(
   limit: number = 1000
 ): Promise<Record<string, unknown>[]> {
   const response = await fetch(
-    `${APIFY_BASE}/datasets/${datasetId}/items?token=${process.env.APIFY_API_KEY}&limit=${limit}`
+    `${APIFY_BASE}/datasets/${datasetId}/items?limit=${limit}`,
+    { headers: { Authorization: `Bearer ${process.env.APIFY_API_KEY}` } }
   );
   if (!response.ok) throw new Error(`Apify dataset failed: ${response.status}`);
   return response.json();

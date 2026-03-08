@@ -1,4 +1,4 @@
-import { getAnthropicClient } from '@/lib/anthropic';
+import { callAnthropicWithFallback } from '@/lib/anthropic';
 import { scoreItems, normalizeItems, buildScoredItemsSummary } from '@/lib/scoring';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildOpportunityAnalysisPrompt, buildTensionDetectionPrompt, buildStrategicBriefPrompt } from './prompts';
@@ -7,41 +7,6 @@ import { getGeoBoost } from './geo-config';
 import { buildRTPAnalysisPrompt } from './right-to-play';
 import type { BrandContext, CultureWireResult, ScoredOpportunity, CulturalTension } from '@/lib/types';
 
-const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
-
-const MAX_INPUT_CHARS = 500_000; // ~125k tokens, safe under 200k limit with system prompt
-
-async function callClaude(system: string, userContent: string, maxTokens = 8192): Promise<string> {
-  const anthropic = getAnthropicClient();
-
-  // Safety truncation to prevent token limit errors
-  const truncatedContent = userContent.length > MAX_INPUT_CHARS
-    ? userContent.slice(0, MAX_INPUT_CHARS) + '\n\n[TRUNCATED - data exceeded size limit]'
-    : userContent;
-
-  for (let i = 0; i < MODELS.length; i++) {
-    try {
-      const response = await anthropic.messages.create({
-        model: MODELS[i],
-        max_tokens: maxTokens,
-        system,
-        messages: [{ role: 'user', content: truncatedContent }],
-      });
-
-      return response.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if ((msg.includes('overloaded') || msg.includes('529')) && i < MODELS.length - 1) {
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error('All models failed');
-}
 
 function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean = false): string {
   const sections: string[] = [];
@@ -195,11 +160,11 @@ export async function runAnalysisPipeline(
 
   // Run opportunity scoring and tension detection in parallel
   const [opportunitiesRaw, tensionsRaw] = await Promise.all([
-    callClaude(
+    callAnthropicWithFallback(
       buildOpportunityAnalysisPrompt(brandName, context),
       enrichedPayload
     ),
-    callClaude(
+    callAnthropicWithFallback(
       buildTensionDetectionPrompt(brandName, context),
       enrichedPayload
     ),
@@ -230,7 +195,7 @@ export async function runAnalysisPipeline(
       tone: context.tone,
     });
     const rtpInput = `Brand: ${brandName}\n\nOpportunities to assess:\n${JSON.stringify(opportunities.slice(0, 10), null, 2)}`;
-    const rtpRaw = await callClaude(rtpPrompt, rtpInput);
+    const rtpRaw = await callAnthropicWithFallback(rtpPrompt, rtpInput);
     const rtpAssessments = parseJSON<Record<string, unknown>[]>(rtpRaw);
 
     await supabase.from('culture_wire_analyses').insert({
@@ -259,7 +224,7 @@ export async function runAnalysisPipeline(
     result_summary: { phase: 'generating_brief', last_update: new Date().toISOString() },
   }).eq('id', searchId);
 
-  const strategicBrief = await callClaude(
+  const strategicBrief = await callAnthropicWithFallback(
     buildStrategicBriefPrompt(brandName, context),
     briefInput
   );

@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase/server';
+import { getSession } from '@/lib/auth/session';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { projectId } = await params;
   const supabase = await createServerClient();
 
   const [projectResult, jobsResult, analysisResult] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', projectId).single(),
+    supabase.from('projects').select('*').eq('id', projectId).eq('user_id', session.sub).single(),
     supabase
       .from('scrape_jobs')
       .select('*')

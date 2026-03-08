@@ -12,7 +12,8 @@ export async function GET() {
   const { data: searches, error } = await supabase
     .from('culture_wire_searches')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(50);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ searches: searches || [] });

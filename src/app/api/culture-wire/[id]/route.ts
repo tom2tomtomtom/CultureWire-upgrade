@@ -12,8 +12,13 @@ export async function GET(
   const { id } = await params;
   const supabase = await createServerClient();
 
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const [searchResult, resultsResult, analysesResult] = await Promise.all([
-    supabase.from('culture_wire_searches').select('*').eq('id', id).single(),
+    supabase.from('culture_wire_searches').select('*').eq('id', id).eq('user_id', session.sub).single(),
     supabase
       .from('culture_wire_results')
       .select('*')
@@ -87,22 +92,26 @@ export async function PATCH(
   if (body.action === 'cancel') {
     const supabase = await createServerClient();
 
-    // Get current search to read active runs
+    // Get current search to read active runs (verify ownership)
     const { data: currentSearch } = await supabase
       .from('culture_wire_searches')
       .select('result_summary')
       .eq('id', id)
+      .eq('user_id', session.sub)
       .single();
 
     // Abort active Apify runs to save credits
     const activeRuns = (currentSearch?.result_summary as Record<string, unknown>)?.active_runs as string[] | undefined;
     if (activeRuns && activeRuns.length > 0) {
       await Promise.allSettled(
-        activeRuns.map(runId =>
-          fetch(`https://api.apify.com/v2/actor-runs/${runId}/abort?token=${process.env.APIFY_API_KEY}`, {
-            method: 'POST',
-          })
-        )
+        activeRuns
+          .filter(runId => /^[a-zA-Z0-9]+$/.test(runId))
+          .map(runId =>
+            fetch(`https://api.apify.com/v2/actor-runs/${runId}/abort`, {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${process.env.APIFY_API_KEY}` },
+            })
+          )
       );
     }
 

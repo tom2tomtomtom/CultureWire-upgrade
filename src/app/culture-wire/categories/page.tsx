@@ -1,8 +1,5 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { CATEGORY_GROUPS } from '@/lib/culture-wire/categories';
-import { Grid3X3 } from 'lucide-react';
 
 const GROUP_COLORS: Record<string, string> = {
   'Consumer & Lifestyle': 'border-orange-500 text-orange-400 bg-orange-500/10',
@@ -16,8 +13,6 @@ const GROUP_COLORS: Record<string, string> = {
 };
 
 export default function CategoriesPage() {
-  const router = useRouter();
-
   return (
     <div className="space-y-8">
       <div>
@@ -34,10 +29,10 @@ export default function CategoriesPage() {
           <h2 className="text-xs font-bold uppercase tracking-widest text-[#888899]">{group.name}</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {group.categories.map((cat) => (
-              <div
+              <Link
                 key={cat.slug}
-                className="cursor-pointer border border-[#2a2a38] bg-[#111118] p-4 transition-colors hover:border-[#FF0000]/50"
-                onClick={() => router.push(`/culture-wire/categories/${cat.slug}`)}
+                href={`/culture-wire/categories/${cat.slug}`}
+                className="block border border-[#2a2a38] bg-[#111118] p-4 transition-colors hover:border-[#FF0000]/50"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -64,7 +59,7 @@ export default function CategoriesPage() {
                     )}
                   </div>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         </div>

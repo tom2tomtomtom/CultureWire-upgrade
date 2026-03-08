@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import type { CultureWireSearch, CultureWireResult } from '@/lib/types';
@@ -13,12 +14,15 @@ export function SearchProgress({ search, results }: SearchProgressProps) {
   const isCollecting = search.status === 'collecting';
   const isAnalyzing = search.status === 'analyzing';
 
-  const byPlatform = new Map<string, CultureWireResult[]>();
-  for (const r of results) {
-    const existing = byPlatform.get(r.source_platform) || [];
-    existing.push(r);
-    byPlatform.set(r.source_platform, existing);
-  }
+  const byPlatform = useMemo(() => {
+    const map = new Map<string, CultureWireResult[]>();
+    for (const r of results) {
+      const existing = map.get(r.source_platform) || [];
+      existing.push(r);
+      map.set(r.source_platform, existing);
+    }
+    return map;
+  }, [results]);
 
   const totalExpected = search.platforms.length * 3;
   const totalCollected = results.length;

@@ -18,6 +18,7 @@ export async function GET(
     .from('culture_wire_searches')
     .select('*')
     .eq('id', id)
+    .eq('user_id', session.sub)
     .single();
 
   if (!search) return NextResponse.json({ error: 'Not found' }, { status: 404 });

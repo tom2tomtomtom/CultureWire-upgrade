@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAnthropicClient } from '@/lib/anthropic';
+import { getAnthropicClient, MODEL_FALLBACK_ORDER } from '@/lib/anthropic';
 import { createServerClient } from '@/lib/supabase/server';
 import { ChatRequestSchema } from '@/lib/validators';
 import { buildPlannerSystemPrompt } from '@/lib/prompts/planner';
@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
     .from('chat_messages')
     .select('*')
     .eq('project_id', projectId)
-    .order('created_at');
+    .order('created_at')
+    .limit(100);
 
   return Response.json({ messages: messages || [] });
 }
@@ -46,7 +47,8 @@ export async function POST(request: NextRequest) {
     .from('chat_messages')
     .select('role, content')
     .eq('project_id', projectId)
-    .order('created_at');
+    .order('created_at')
+    .limit(100);
 
   // Load project context (brief text if any)
   const { data: project } = await supabase
@@ -76,10 +78,8 @@ export async function POST(request: NextRequest) {
       try {
         // Stream with model fallback — streaming create() doesn't throw on 529,
         // errors surface during iteration, so we catch and retry with fallback model
-        const models = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
-
-        for (let i = 0; i < models.length; i++) {
-          const model = models[i];
+        for (let i = 0; i < MODEL_FALLBACK_ORDER.length; i++) {
+          const model = MODEL_FALLBACK_ORDER[i];
           try {
             const response = await anthropic.messages.create({
               model,
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             const isOverloaded = msg.includes('overloaded') || msg.includes('529') || msg.includes('rate');
-            if (isOverloaded && i < models.length - 1) {
-              console.log(`[chat] ${model} overloaded, falling back to ${models[i + 1]}`);
+            if (isOverloaded && i < MODEL_FALLBACK_ORDER.length - 1) {
+              console.log(`[chat] ${model} overloaded, falling back to ${MODEL_FALLBACK_ORDER[i + 1]}`);
               fullResponse = ''; // Reset in case partial data came through
               continue;
             }

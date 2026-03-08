@@ -4,6 +4,7 @@ import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect } from '@/lib/apify';
 import { ExecuteRequestSchema, CancelExecutionSchema } from '@/lib/validators';
 import type { PlannedActorRun, ScrapeJob } from '@/lib/types';
+import { ACTOR_REGISTRY } from '@/lib/actor-registry';
 
 async function processJob(jobId: string, projectId: string, runId: string, platform: string) {
   const supabase = createAdminClient();
@@ -76,7 +77,16 @@ export async function POST(request: NextRequest) {
     .update({ status: 'executing' })
     .eq('id', projectId);
 
-  const plannedRuns = plan.plan_data as PlannedActorRun[];
+  const allPlannedRuns = plan.plan_data as PlannedActorRun[];
+  // Whitelist: only allow runs whose platform/actorId match the ACTOR_REGISTRY
+  const plannedRuns = allPlannedRuns.filter((run) => {
+    const entry = ACTOR_REGISTRY[run.platform];
+    if (!entry || entry.id !== run.actorId) {
+      console.warn(`[execute] Skipping unrecognized actor: platform=${run.platform}, actorId=${run.actorId}`);
+      return false;
+    }
+    return true;
+  });
   const jobs: ScrapeJob[] = [];
   // Map job IDs to their actual platform for correct source_platform storage
   const jobPlatformMap = new Map<string, string>();

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server';
-import { getAnthropicClient } from '@/lib/anthropic';
+import { callAnthropicWithFallback } from '@/lib/anthropic';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 import { SynthesizeRequestSchema } from '@/lib/validators';
 import {
@@ -11,44 +11,10 @@ import {
 import { scoreItems, toDisplayItems, buildScoredItemsSummary, normalizeItems, boostRelevance } from '@/lib/scoring';
 import type { ResearchSpec, ScrapeResult } from '@/lib/types';
 
-const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
-
 // Fields that contain the actual content — keep these at full length
 const CONTENT_FIELDS = new Set([
   'title', 'text', 'body', 'description', 'companyReply', 'caption',
 ]);
-
-async function callClaude(system: string, userContent: string, maxTokens = 4096): Promise<string> {
-  const anthropic = getAnthropicClient();
-
-  for (let i = 0; i < MODELS.length; i++) {
-    const model = MODELS[i];
-    try {
-      const response = await anthropic.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system,
-        messages: [{ role: 'user', content: userContent }],
-      });
-
-      return response.content
-        .filter((block) => block.type === 'text')
-        .map((block) => block.text)
-        .join('');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const isOverloaded = msg.includes('overloaded') || msg.includes('529') || msg.includes('rate');
-
-      if (isOverloaded && i < MODELS.length - 1) {
-        console.log(`[synthesize] ${model} overloaded, falling back to ${MODELS[i + 1]}`);
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  throw new Error('Unreachable');
-}
 
 function buildDataSummary(platform: string, items: Record<string, unknown>[]): string {
   const count = items.length;
@@ -285,7 +251,7 @@ export async function POST(request: NextRequest) {
         const dataSummary = buildDataSummary(platform, allItems);
 
         if (chunks.length === 1) {
-          analysis = await callClaude(
+          analysis = await callAnthropicWithFallback(
             systemPrompt,
             `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nHere are ${capped.length} results from ${platform} (${allItems.length} total collected), sorted by engagement score:\n\n${JSON.stringify(capped, null, 2)}`,
             8192
@@ -293,13 +259,13 @@ export async function POST(request: NextRequest) {
         } else {
           const chunkSummaries: string[] = [];
           for (const chunk of chunks) {
-            const summary = await callClaude(
+            const summary = await callAnthropicWithFallback(
               systemPrompt,
               `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nSummarize the key findings from this batch of ${chunk.length} results:\n\n${JSON.stringify(chunk, null, 2)}`
             );
             chunkSummaries.push(summary);
           }
-          analysis = await callClaude(
+          analysis = await callAnthropicWithFallback(
             systemPrompt,
             `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nConsolidate these ${chunkSummaries.length} batch summaries into a single analysis:\n\n${chunkSummaries.join('\n\n---\n\n')}`,
             8192
@@ -327,7 +293,7 @@ export async function POST(request: NextRequest) {
         .map((a) => `## ${a.platform}\n\n${a.analysis}`)
         .join('\n\n---\n\n');
 
-      const crossSourceAnalysis = await callClaude(
+      const crossSourceAnalysis = await callAnthropicWithFallback(
         buildCrossSourcePrompt(researchSpec),
         crossSourceInput,
         8192
@@ -352,7 +318,7 @@ export async function POST(request: NextRequest) {
 
       const strategicInput = `## Cross-Source Synthesis\n\n${crossSourceAnalysis}\n\n---\n\n## Per-Source Evidence (key sections)\n\n${perSourceSection}`;
 
-      const strategicNarrative = await callClaude(
+      const strategicNarrative = await callAnthropicWithFallback(
         buildStrategicNarrativePrompt(researchSpec),
         strategicInput,
         8192
@@ -370,7 +336,7 @@ export async function POST(request: NextRequest) {
       console.log('[synthesize] Generating creative routes...');
       const routesInput = `## Strategic Narrative\n\n${strategicNarrative}\n\n---\n\n## Cross-Source Synthesis\n\n${crossSourceAnalysis}`;
 
-      const creativeRoutes = await callClaude(
+      const creativeRoutes = await callAnthropicWithFallback(
         buildCreativeRoutesPrompt(researchSpec, brandContext),
         routesInput,
         8192

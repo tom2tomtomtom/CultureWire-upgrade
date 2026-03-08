@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { SearchProgress } from '@/components/culture-wire/search-progress';
 import { ResultsView } from '@/components/culture-wire/results-view';
@@ -37,12 +37,14 @@ export default function CultureWireDetailPage() {
   const [analyses, setAnalyses] = useState<CultureWireAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const statusRef = useRef<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch(`/api/culture-wire/${id}`);
       const data = await res.json();
       setSearch(data.search);
+      statusRef.current = data.search?.status ?? null;
       setResults(data.results || []);
       setAnalyses(data.analyses || []);
     } catch (err) {
@@ -76,10 +78,14 @@ export default function CultureWireDetailPage() {
   }, [fetchData]);
 
   useEffect(() => {
-    if (!search || search.status === 'complete' || search.status === 'failed') return;
-    const interval = setInterval(fetchData, 3000);
+    const interval = setInterval(() => {
+      const status = statusRef.current;
+      if (status && status !== 'complete' && status !== 'failed') {
+        fetchData();
+      }
+    }, 3000);
     return () => clearInterval(interval);
-  }, [search, fetchData]);
+  }, [fetchData]);
 
   if (loading) {
     return (
