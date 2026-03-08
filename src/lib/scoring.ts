@@ -527,6 +527,51 @@ function scoreTrustpilot(items: Record<string, unknown>[]): ScoredItem[] {
   });
 }
 
+/**
+ * Boost scores based on relevance to research objective keywords.
+ * Items mentioning the research subject get a significant boost so they
+ * aren't buried by high-engagement but irrelevant content.
+ */
+export function boostRelevance(
+  items: ScoredItem[],
+  relevanceKeywords: string[]
+): ScoredItem[] {
+  if (relevanceKeywords.length === 0) return items;
+
+  const lowerKeywords = relevanceKeywords.map((k) => k.toLowerCase());
+
+  return items.map((item) => {
+    // Build a text blob from all string content fields
+    const textBlob = [
+      str(item.title),
+      str(item.text),
+      str(item.body),
+      str(item.caption),
+      str(item.description),
+      str(item.communityName),
+      str(item._title),
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    // Count how many distinct keywords match
+    const matchCount = lowerKeywords.filter((kw) => textBlob.includes(kw)).length;
+
+    if (matchCount === 0) return item;
+
+    // Boost: +15 for first keyword match, +5 for each additional
+    const boost = 15 + Math.min(matchCount - 1, 3) * 5;
+    const boostedScore = clamp(item._score + boost, 0, 100);
+
+    return {
+      ...item,
+      _score: Math.round(boostedScore),
+      _tier: tierLabel(boostedScore),
+      _relevance_boost: boost,
+    };
+  });
+}
+
 /** Strip scored items down to display-only fields for storage in metadata. */
 export function toDisplayItems(items: ScoredItem[], limit = 15): TopItemDisplay[] {
   return items

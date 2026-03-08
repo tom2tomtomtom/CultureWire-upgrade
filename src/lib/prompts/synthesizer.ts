@@ -261,6 +261,14 @@ ${OPPORTUNITY_SCORING}
 
 ${TENSION_DETECTION}
 
+CRITICAL INSTRUCTION — RELEVANCE FOCUS:
+The data below contains items collected from multiple search layers (brand-specific, category, and discovery/trending). Some items may be about competitors or the broader category rather than the specific research subject. YOU MUST:
+1. Focus your analysis primarily on content DIRECTLY relevant to the research objective
+2. Competitor and category content should provide CONTEXT, not dominate the analysis
+3. If the research objective is about Brand X, a post about Brand X with 3K engagement is MORE valuable than a post about Brand Y with 80K engagement
+4. Never claim the research subject is "absent" or "invisible" if there IS content about it in the data — even if that content has lower engagement than competitor content
+5. Items with a _relevance_boost field are flagged as directly relevant to the research subject
+
 Analyze the data and produce these sections (use ## headings):
 
 1. **Top-line Verdict** — 3-4 sentences, the single biggest story from this data. Lead with what surprised you. Include the most striking stat and name a specific piece of content that exemplifies it.

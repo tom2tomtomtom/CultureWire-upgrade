@@ -8,7 +8,7 @@ import {
   buildStrategicNarrativePrompt,
   buildCreativeRoutesPrompt,
 } from '@/lib/prompts/synthesizer';
-import { scoreItems, toDisplayItems, buildScoredItemsSummary, normalizeItems } from '@/lib/scoring';
+import { scoreItems, toDisplayItems, buildScoredItemsSummary, normalizeItems, boostRelevance } from '@/lib/scoring';
 import type { ResearchSpec, ScrapeResult } from '@/lib/types';
 
 const MODELS = ['claude-sonnet-4-20250514', 'claude-haiku-4-5-20251001'];
@@ -213,8 +213,34 @@ export async function POST(request: NextRequest) {
         byPlatform.set(r.source_platform, existing);
       }
 
+      // Build relevance keywords from the research spec
+      // Extract the subject from the objective and combine with spec keywords
+      const relevanceKeywords: string[] = [...(researchSpec.keywords || [])];
+      // Extract brand/subject names from the objective (first few significant words)
+      const objectiveWords = (researchSpec.objective || '')
+        .replace(/understand|analyze|research|explore|investigate|how|what|why|the|and|for|in|of|to|a|an|is|are|do|does|over|last|months?|years?|weeks?|brand|sentiment|toward|towards|among|consumers?|perception/gi, '')
+        .split(/\s+/)
+        .filter((w) => w.length > 2)
+        .slice(0, 5);
+      relevanceKeywords.push(...objectiveWords);
+      // Add competitors as lower-priority context
+      const allRelevanceKeywords = [...new Set(relevanceKeywords.filter(Boolean))];
+      console.log('[synthesize] Relevance keywords:', allRelevanceKeywords);
+
       // ===== PASS 1: Per-source analysis (with scoring) =====
       const perSourceAnalyses: { platform: string; analysis: string }[] = [];
+
+      // Load scrape jobs to tag items with their collection layer
+      const { data: scrapeJobs } = await bgSupabase
+        .from('scrape_jobs')
+        .select('id, input_params, actor_display_name')
+        .eq('project_id', projectId);
+      const jobLayerMap = new Map<string, string>();
+      for (const job of scrapeJobs || []) {
+        // The rationale field is stored in the planned run, but input_params has the search terms
+        // We can infer layer from the job structure
+        jobLayerMap.set(job.id, job.actor_display_name);
+      }
 
       for (const [platform, platformResults] of byPlatform) {
         console.log(`[synthesize] Processing ${platform}...`);
@@ -224,7 +250,9 @@ export async function POST(request: NextRequest) {
         const systemPrompt = buildPerSourcePrompt(platform, researchSpec);
 
         // Score items deterministically before sending to Claude
-        const scoredItems = scoreItems(platform, allItems);
+        let scoredItems = scoreItems(platform, allItems);
+        // Apply relevance boost so research-subject items rank higher
+        scoredItems = boostRelevance(scoredItems, allRelevanceKeywords);
         const topItems = toDisplayItems(scoredItems);
         const scoredSummary = buildScoredItemsSummary(platform, scoredItems);
 

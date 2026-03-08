@@ -25,14 +25,15 @@ interface SynthesisProgressProps {
   projectId: string;
 }
 
-const PASS_ORDER = ['per_source', 'cross_source', 'strategic_narrative'] as const;
+const PASS_ORDER = ['per_source', 'cross_source', 'strategic_narrative', 'creative_routes'] as const;
 const PASS_LABELS: Record<string, string> = {
   per_source: 'Analyzing individual sources',
   cross_source: 'Cross-source pattern analysis',
   strategic_narrative: 'Generating strategic narrative',
+  creative_routes: 'Generating creative routes',
 };
 
-const PASS_WEIGHTS = { per_source: 60, cross_source: 25, strategic_narrative: 15 };
+const PASS_WEIGHTS = { per_source: 50, cross_source: 20, strategic_narrative: 15, creative_routes: 15 };
 
 const platformIcons: Record<string, React.ElementType> = {
   reddit: MessageSquare,
@@ -74,6 +75,9 @@ function getStatusMessage(
   }
   if (currentPass === 'strategic_narrative') {
     return 'Crafting the strategic narrative';
+  }
+  if (currentPass === 'creative_routes') {
+    return 'Generating creative routes and opportunities';
   }
   return 'Analyzing collected data across all sources';
 }

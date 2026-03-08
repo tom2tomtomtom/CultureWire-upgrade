@@ -61,6 +61,26 @@ function normalizeGeo(raw: string): string {
 //
 // This mirrors the Uncommon plugin's collection approach for richer, more diverse data.
 
+/**
+ * Extract the subject brand/topic from the research objective.
+ * E.g., "Understand Gen Z brand sentiment toward KFC in Australia" → ["KFC"]
+ */
+function extractSubjectFromObjective(objective: string): string[] {
+  if (!objective) return [];
+  // Remove common research phrasing to isolate the subject
+  const cleaned = objective
+    .replace(/understand|analyze|research|explore|investigate|examine|assess|evaluate|map|track|monitor|compare|measure/gi, '')
+    .replace(/\b(how|what|why|the|and|for|in|of|to|a|an|is|are|do|does|over|last|next|past|months?|years?|weeks?|brand|sentiment|toward|towards|among|consumers?|perception|awareness|engagement|conversation|discourse|landscape|trends?|opportunities?|gen\s*z|millennials?|boomers?|audience|target|australian?|americans?|global|online)\b/gi, '')
+    .trim();
+  // Split and keep words that look like proper nouns (capitalized) or are 3+ chars
+  const words = cleaned
+    .split(/\s+/)
+    .filter((w) => w.length > 2)
+    .map((w) => w.replace(/[,.:;!?'"]+/g, ''))
+    .filter(Boolean);
+  return [...new Set(words)];
+}
+
 function buildLayeredRuns(
   platform: Platform,
   spec: ResearchSpec
@@ -72,6 +92,11 @@ function buildLayeredRuns(
   const timeRange = spec.time_horizon || 'last 6 months';
   const brands = spec.competitors;
   const keywords = spec.keywords;
+
+  // Extract the research subject and ensure it's always searched for
+  const subjectBrands = extractSubjectFromObjective(spec.objective);
+  // Combine subject + competitors for brand layer, with subject first
+  const allBrands = [...new Set([...subjectBrands, ...brands])];
   const hashtags = keywords.map((k) => k.replace(/\s+/g, ''));
   const runs: PlannedActorRun[] = [];
 
@@ -99,26 +124,35 @@ function buildLayeredRuns(
     case 'reddit': {
       // Reddit is free — be generous with layers
 
-      // Layer 1: Brand mentions (if competitors exist)
+      // Layer 1a: Subject-specific search (always — this is the core)
+      if (subjectBrands.length > 0) {
+        addRun('Subject', {
+          keywords: subjectBrands,
+          brands: allBrands, subreddits: [], hashtags: [], urls: [],
+          geo, timeRange, maxResults: 50,
+        }, `Subject-specific conversations about ${subjectBrands.join(', ')}`, 50);
+      }
+
+      // Layer 1b: Competitor mentions (if competitors exist)
       if (brands.length > 0) {
         addRun('Brand', {
           keywords: brands,
           brands, subreddits: [], hashtags: [], urls: [],
           geo, timeRange, maxResults: 50,
-        }, `Brand-specific conversations about ${brands.join(', ')}`, 50);
+        }, `Competitor conversations about ${brands.join(', ')}`, 50);
       }
 
       // Layer 2: Category keywords — the core research topic
       addRun('Category', {
         keywords,
-        brands, subreddits: [], hashtags: [], urls: [],
+        brands: allBrands, subreddits: [], hashtags: [], urls: [],
         geo, timeRange, maxResults: 80,
       }, `Category conversations: ${keywords.slice(0, 3).join(', ')}`, 80);
 
       // Layer 3: Discovery — trending/hot posts in the space
       const discoveryParams: PlannerParams = {
         keywords,
-        brands, subreddits: [], hashtags: [], urls: [],
+        brands: allBrands, subreddits: [], hashtags: [], urls: [],
         geo, timeRange, maxResults: 50,
       };
       const discoveryInput = entry.buildInput(discoveryParams);
@@ -137,26 +171,35 @@ function buildLayeredRuns(
     }
 
     case 'youtube': {
-      // Layer 1: Brand-specific videos (if competitors exist)
+      // Layer 1a: Subject-specific videos (always)
+      if (subjectBrands.length > 0) {
+        addRun('Subject', {
+          keywords: subjectBrands.map((b) => `${b} review`),
+          brands: allBrands, subreddits: [], hashtags: [], urls: [],
+          geo, timeRange, maxResults: 50,
+        }, `Subject-focused content: ${subjectBrands.join(', ')} reviews`, 50);
+      }
+
+      // Layer 1b: Competitor videos (if competitors exist)
       if (brands.length > 0) {
         addRun('Brand', {
           keywords: brands.slice(0, 3).map((b) => `${b} review`),
           brands, subreddits: [], hashtags: [], urls: [],
-          geo, timeRange, maxResults: 50,
-        }, `Brand-focused content: ${brands.slice(0, 3).join(', ')} reviews`, 50);
+          geo, timeRange, maxResults: 40,
+        }, `Competitor content: ${brands.slice(0, 3).join(', ')} reviews`, 40);
       }
 
       // Layer 2: Category keyword search
       addRun('Category', {
         keywords: keywords.slice(0, 3),
-        brands, subreddits: [], hashtags: [], urls: [],
+        brands: allBrands, subreddits: [], hashtags: [], urls: [],
         geo, timeRange, maxResults: 60,
       }, `Category content: ${keywords.slice(0, 3).join(', ')}`, 60);
 
       // Layer 3: Popular/trending — sort by viewCount
       const trendingParams: PlannerParams = {
         keywords: keywords.slice(0, 2),
-        brands, subreddits: [], hashtags: [], urls: [],
+        brands: allBrands, subreddits: [], hashtags: [], urls: [],
         geo, timeRange, maxResults: 40,
       };
       const trendingInput = entry.buildInput(trendingParams);
@@ -174,24 +217,35 @@ function buildLayeredRuns(
     }
 
     case 'tiktok': {
-      // Layer 1: Keyword search — direct topic content
+      // Layer 1: Subject-specific content (always)
+      if (subjectBrands.length > 0) {
+        addRun('Subject', {
+          keywords: subjectBrands,
+          brands: allBrands, subreddits: [], hashtags: [],
+          urls: [], geo, timeRange, maxResults: 60,
+        }, `Subject searches: ${subjectBrands.join(', ')}`, 60);
+      }
+
+      // Layer 2: Keyword search — category topic content
       addRun('Category', {
         keywords,
-        brands, subreddits: [], hashtags: [],
+        brands: allBrands, subreddits: [], hashtags: [],
         urls: [], geo, timeRange, maxResults: 60,
       }, `Topic searches: ${keywords.slice(0, 3).join(', ')}`, 60);
 
-      // Layer 2: Hashtag discovery — cultural conversation
+      // Layer 3: Hashtag discovery — cultural conversation
+      const subjectHashtags = subjectBrands.map((b) => b.replace(/\s+/g, '').toLowerCase());
       const trendingHashtags = [
+        ...subjectHashtags,
         ...hashtags,
         ...(brands.length > 0 ? brands.map((b) => b.replace(/\s+/g, '').toLowerCase()) : []),
       ];
       addRun('Discovery', {
         keywords: [],
-        brands, subreddits: [],
-        hashtags: trendingHashtags,
+        brands: allBrands, subreddits: [],
+        hashtags: [...new Set(trendingHashtags)],
         urls: [], geo, timeRange, maxResults: 60,
-      }, `Hashtag discovery: #${trendingHashtags.slice(0, 3).join(', #')}`, 60);
+      }, `Hashtag discovery: #${[...new Set(trendingHashtags)].slice(0, 3).join(', #')}`, 60);
       break;
     }
 
@@ -217,23 +271,34 @@ function buildLayeredRuns(
     }
 
     case 'instagram': {
-      // Layer 1: Hashtag search — core topic content
+      // Layer 1: Subject-specific hashtags (always)
+      if (subjectBrands.length > 0) {
+        const subjectHashtags = subjectBrands.map((b) => b.replace(/\s+/g, '').toLowerCase());
+        addRun('Subject', {
+          keywords: subjectBrands,
+          brands: allBrands, subreddits: [],
+          hashtags: subjectHashtags,
+          urls: [], geo, timeRange, maxResults: 60,
+        }, `Subject content: #${subjectHashtags.join(', #')}`, 60);
+      }
+
+      // Layer 2: Category hashtag search
       addRun('Category', {
         keywords,
-        brands, subreddits: [],
+        brands: allBrands, subreddits: [],
         hashtags,
         urls: [], geo, timeRange, maxResults: 60,
       }, `Hashtag posts: #${hashtags.slice(0, 3).join(', #')}`, 60);
 
-      // Layer 2: Brand profiles (if competitors exist)
+      // Layer 3: Competitor profiles (if competitors exist)
       if (brands.length > 0) {
         const brandHashtags = brands.map((b) => b.replace(/\s+/g, '').toLowerCase());
         addRun('Brand', {
           keywords: [],
           brands, subreddits: [],
           hashtags: brandHashtags,
-          urls: [], geo, timeRange, maxResults: 60,
-        }, `Brand content: #${brandHashtags.slice(0, 3).join(', #')}`, 60);
+          urls: [], geo, timeRange, maxResults: 40,
+        }, `Competitor content: #${brandHashtags.slice(0, 3).join(', #')}`, 40);
       }
       break;
     }
