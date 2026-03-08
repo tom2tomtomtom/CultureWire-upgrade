@@ -255,19 +255,13 @@ export const ACTOR_REGISTRY: Record<string, ActorRegistryEntry> = {
 
 const TwitterInputSchema = z.object({
   searchTerms: z.array(z.string()).min(1),
-  maxItems: z.number().min(1).max(500).default(100),
+  maxTweets: z.number().min(1).max(500).default(100),
   sort: z.enum(['Latest', 'Top']).default('Top'),
 });
 
-const LinkedInInputSchema = z.object({
-  searchUrl: z.string().optional(),
-  keywords: z.array(z.string()).optional(),
-  maxItems: z.number().min(1).max(200).default(50),
-});
-
 const FacebookInputSchema = z.object({
-  searchTerms: z.array(z.string()).min(1),
-  maxItems: z.number().min(1).max(200).default(50),
+  startUrls: z.array(z.object({ url: z.string() })).min(1),
+  resultsLimit: z.number().min(1).max(200).default(50),
 });
 
 const NewsInputSchema = z.object({
@@ -278,7 +272,7 @@ const NewsInputSchema = z.object({
 
 // Extended platforms (Phase 3)
 ACTOR_REGISTRY.twitter = {
-  id: 'apidojo/twitter-scraper-v2',
+  id: 'quacker/twitter-scraper',
   platform: 'twitter' as Platform,
   displayName: 'Twitter/X',
   description: 'Search Twitter/X posts. Best for real-time conversation and trending topics.',
@@ -286,7 +280,7 @@ ACTOR_REGISTRY.twitter = {
   inputSchema: TwitterInputSchema,
   buildInput: (params) => ({
     searchTerms: params.keywords.slice(0, 5),
-    maxItems: Math.min(params.maxResults, 200),
+    maxTweets: Math.min(params.maxResults, 200),
     sort: 'Top',
   }),
   extractFields: ['text', 'createdAt', 'user', 'replyCount', 'retweetCount', 'likeCount', 'viewCount', 'url'],
@@ -294,21 +288,9 @@ ACTOR_REGISTRY.twitter = {
   defaults: { maxResults: 100, timeout: 180 },
 };
 
-ACTOR_REGISTRY.linkedin = {
-  id: 'anchor/linkedin-scraper',
-  platform: 'linkedin' as Platform,
-  displayName: 'LinkedIn',
-  description: 'Search LinkedIn posts and articles. Best for B2B insights and professional sentiment.',
-  useCases: ['B2B brand sentiment', 'Professional discourse analysis', 'Industry thought leadership tracking', 'Corporate reputation monitoring'],
-  inputSchema: LinkedInInputSchema,
-  buildInput: (params) => ({
-    keywords: params.keywords.slice(0, 3),
-    maxItems: Math.min(params.maxResults, 100),
-  }),
-  extractFields: ['text', 'authorName', 'authorHeadline', 'likeCount', 'commentCount', 'shareCount', 'postedAt', 'url'],
-  costProfile: { model: 'pay_per_result', estimatedCostPer100: 25 },
-  defaults: { maxResults: 50, timeout: 180 },
-};
+// LinkedIn scraper requires paid rental on Apify — disabled until rented
+// To enable: rent actor at https://console.apify.com/actors/kfiWbq3boy3dWKbiL
+// Then uncomment and set id to 'curious_coder/linkedin-post-search-scraper'
 
 ACTOR_REGISTRY.facebook = {
   id: 'apify/facebook-posts-scraper',
@@ -318,8 +300,10 @@ ACTOR_REGISTRY.facebook = {
   useCases: ['Community group insights', 'Brand page engagement', 'Older demographic sentiment', 'Local community trends'],
   inputSchema: FacebookInputSchema,
   buildInput: (params) => ({
-    searchTerms: params.keywords.slice(0, 5),
-    maxItems: Math.min(params.maxResults, 100),
+    startUrls: params.keywords.slice(0, 3).map((kw) => ({
+      url: `https://www.facebook.com/search/posts/?q=${encodeURIComponent(kw)}`,
+    })),
+    resultsLimit: Math.min(params.maxResults, 100),
   }),
   extractFields: ['text', 'authorName', 'likes', 'comments', 'shares', 'timestamp', 'url'],
   costProfile: { model: 'pay_per_result', estimatedCostPer100: 15 },
