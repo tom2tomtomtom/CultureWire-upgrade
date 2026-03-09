@@ -3,7 +3,7 @@ import { verifyGatewayJWT } from '@/lib/gateway-jwt';
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'https://www.aiden.services';
 
-const PUBLIC_ROUTES = ['/api/auth', '/_next', '/favicon.ico'];
+const PUBLIC_ROUTES = ['/api/auth', '/_next', '/favicon.ico', '/subscribe'];
 
 const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
 
@@ -21,7 +21,9 @@ export async function middleware(request: NextRequest) {
     if (user) {
       // Check email allowlist
       if (ALLOWED_EMAILS.length > 0 && !ALLOWED_EMAILS.includes(user.email.toLowerCase())) {
-        return new NextResponse('Access denied', { status: 403 });
+        if (!pathname.startsWith('/subscribe')) {
+          return NextResponse.redirect(new URL('/subscribe', request.url));
+        }
       }
       return NextResponse.next();
     }
