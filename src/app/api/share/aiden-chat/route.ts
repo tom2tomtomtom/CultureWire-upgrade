@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
 
   try {
     if (reportType === 'culture_wire') {
-      return await buildCultureWireSummary(supabase, reportId, session.sub);
+      return await buildCultureWireExport(supabase, reportId, session.sub);
     } else {
-      return await buildResearchSummary(supabase, reportId, session.sub);
+      return await buildResearchExport(supabase, reportId, session.sub);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -35,15 +35,14 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function buildCultureWireSummary(
+async function buildCultureWireExport(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   reportId: string,
   userId: string
 ) {
-  // Verify ownership
   const { data: search, error: searchError } = await supabase
     .from('culture_wire_searches')
-    .select('id, user_id, brand_name, platforms, geo, status')
+    .select('id, user_id, brand_name, platforms, geo, status, created_at')
     .eq('id', reportId)
     .single();
 
@@ -55,11 +54,17 @@ async function buildCultureWireSummary(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Fetch analyses
-  const { data: analyses } = await supabase
-    .from('culture_wire_analyses')
-    .select('analysis_type, content')
-    .eq('search_id', reportId);
+  // Fetch all analyses and raw results
+  const [{ data: analyses }, { data: results }] = await Promise.all([
+    supabase
+      .from('culture_wire_analyses')
+      .select('analysis_type, content')
+      .eq('search_id', reportId),
+    supabase
+      .from('culture_wire_results')
+      .select('source_platform, layer, item_count, raw_data')
+      .eq('search_id', reportId),
+  ]);
 
   const opportunities =
     (analyses?.find((a) => a.analysis_type === 'opportunities')?.content as {
@@ -70,6 +75,8 @@ async function buildCultureWireSummary(
         score: number;
         platform: string;
         right_to_play: string;
+        evidence: string[];
+        dimensions?: Record<string, number>;
       }>;
     })?.opportunities || [];
 
@@ -79,7 +86,9 @@ async function buildCultureWireSummary(
         name: string;
         description: string;
         severity: number;
+        platforms: string[];
         brand_implication: string;
+        evidence: string[];
       }>;
     })?.tensions || [];
 
@@ -88,59 +97,112 @@ async function buildCultureWireSummary(
       brief?: string;
     })?.brief || '';
 
+  const rtp = analyses?.find((a) => a.analysis_type === 'right_to_play')?.content;
+
   const brandName = (search as { brand_name: string }).brand_name;
-
-  // Build concise markdown
-  const topOpps = opportunities
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
-
-  const topTensions = tensions
-    .sort((a, b) => b.severity - a.severity)
-    .slice(0, 2);
+  const platforms = (search as { platforms: string[] }).platforms;
+  const geo = (search as { geo: string }).geo;
 
   let markdown = `# CultureWire Report: ${brandName}\n\n`;
+  markdown += `**Platforms**: ${platforms.join(', ')} | **Geo**: ${geo} | **Date**: ${new Date((search as { created_at: string }).created_at).toLocaleDateString()}\n\n`;
 
-  // Executive summary from strategic brief (first paragraph or first 300 chars)
+  // Strategic Brief (full)
   if (brief) {
-    const firstParagraph = brief.split('\n\n')[0] || brief;
-    const excerpt =
-      firstParagraph.length > 400
-        ? firstParagraph.slice(0, 400) + '...'
-        : firstParagraph;
-    markdown += `## Executive Summary\n${excerpt}\n\n`;
+    markdown += `## Strategic Brief\n\n${brief}\n\n`;
   }
 
-  // Top opportunities
-  if (topOpps.length > 0) {
-    markdown += `## Top Opportunities\n`;
-    for (const opp of topOpps) {
-      markdown += `- **[${opp.tier}] ${opp.title}** (score: ${opp.score}, ${opp.platform}) - ${opp.description}\n`;
-    }
+  // Right to Play
+  if (rtp) {
+    markdown += `## Right to Play Assessment\n\n`;
+    const rtpContent = rtp as Record<string, unknown>;
+    if (rtpContent.classification) markdown += `**Classification**: ${rtpContent.classification}\n`;
+    if (rtpContent.score) markdown += `**Score**: ${rtpContent.score}/100\n`;
+    if (rtpContent.rationale) markdown += `\n${rtpContent.rationale}\n`;
     markdown += '\n';
   }
 
-  // Top tensions
-  if (topTensions.length > 0) {
-    markdown += `## Key Tensions\n`;
-    for (const t of topTensions) {
-      markdown += `- **${t.name}** (severity: ${t.severity}/10) - ${t.description}. *Implication: ${t.brand_implication}*\n`;
+  // All opportunities
+  if (opportunities.length > 0) {
+    markdown += `## Opportunities (${opportunities.length})\n\n`;
+    for (const opp of opportunities.sort((a, b) => b.score - a.score)) {
+      markdown += `### [${opp.tier}] ${opp.title} (Score: ${opp.score}/100)\n`;
+      markdown += `**Platform**: ${opp.platform} | **Right to Play**: ${opp.right_to_play}\n\n`;
+      markdown += `${opp.description}\n\n`;
+      if (opp.dimensions) {
+        markdown += `**Dimensions**: ${Object.entries(opp.dimensions).map(([k, v]) => `${k}: ${v}`).join(', ')}\n\n`;
+      }
+      if (opp.evidence?.length > 0) {
+        markdown += `**Evidence**:\n`;
+        for (const e of opp.evidence) {
+          markdown += `- ${e}\n`;
+        }
+        markdown += '\n';
+      }
+    }
+  }
+
+  // All tensions
+  if (tensions.length > 0) {
+    markdown += `## Cultural Tensions (${tensions.length})\n\n`;
+    for (const t of tensions.sort((a, b) => b.severity - a.severity)) {
+      markdown += `### ${t.name} (Severity: ${t.severity}/10)\n`;
+      markdown += `**Platforms**: ${t.platforms.join(', ')}\n\n`;
+      markdown += `${t.description}\n\n`;
+      markdown += `**Brand Implication**: ${t.brand_implication}\n\n`;
+      if (t.evidence?.length > 0) {
+        markdown += `**Evidence**:\n`;
+        for (const e of t.evidence) {
+          markdown += `- ${e}\n`;
+        }
+        markdown += '\n';
+      }
+    }
+  }
+
+  // Collection data summary
+  if (results && results.length > 0) {
+    markdown += `## Collection Data\n\n`;
+    markdown += `| Platform | Layer | Items |\n|----------|-------|-------|\n`;
+    for (const r of results) {
+      markdown += `| ${r.source_platform} | ${r.layer} | ${r.item_count} |\n`;
     }
     markdown += '\n';
+
+    // Include top raw posts per platform
+    for (const r of results) {
+      if (!r.raw_data?.length) continue;
+      const items = r.raw_data as Record<string, unknown>[];
+      const top = items.slice(0, 10);
+      markdown += `### ${r.source_platform} — ${r.layer} (top ${top.length} of ${r.item_count})\n\n`;
+      for (const item of top) {
+        const title = item.title || item.caption || item.text || '';
+        const body = item.body || item.description || item.content || '';
+        const url = item.url || item.webVideoUrl || '';
+        const engagement = item.score || item.likesCount || item.viewCount || item.diggCount || item.likes || '';
+        if (title) markdown += `**${title}**\n`;
+        if (body) {
+          const bodyStr = String(body);
+          markdown += `${bodyStr.length > 300 ? bodyStr.slice(0, 300) + '...' : bodyStr}\n`;
+        }
+        if (engagement) markdown += `Engagement: ${engagement}`;
+        if (url) markdown += ` | [Link](${url})`;
+        if (engagement || url) markdown += '\n';
+        markdown += '\n';
+      }
+    }
   }
 
   return NextResponse.json({ markdown });
 }
 
-async function buildResearchSummary(
+async function buildResearchExport(
   supabase: Awaited<ReturnType<typeof createServerClient>>,
   reportId: string,
   userId: string
 ) {
-  // Verify ownership
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('id, user_id, title, description')
+    .select('id, user_id, title, description, objectives, created_at')
     .eq('id', reportId)
     .single();
 
@@ -152,38 +214,35 @@ async function buildResearchSummary(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // Fetch analyses
+  // Fetch all analyses
   const { data: analyses } = await supabase
     .from('analysis_results')
     .select('pass_type, analysis_content')
-    .eq('project_id', reportId);
-
-  const strategicNarrative = analyses?.find(
-    (a) => a.pass_type === 'strategic_narrative'
-  );
-  const crossSource = analyses?.find((a) => a.pass_type === 'cross_source');
+    .eq('project_id', reportId)
+    .order('created_at', { ascending: true });
 
   const title = (project as { title: string }).title;
   const description = (project as { description: string | null }).description;
+  const objectives = (project as { objectives: string | null }).objectives;
 
   let markdown = `# Research Report: ${title}\n\n`;
 
   if (description) {
     markdown += `${description}\n\n`;
   }
-
-  if (strategicNarrative) {
-    const content = strategicNarrative.analysis_content;
-    const excerpt =
-      content.length > 600 ? content.slice(0, 600) + '...' : content;
-    markdown += `## Strategic Narrative\n${excerpt}\n\n`;
+  if (objectives) {
+    markdown += `**Objectives**: ${objectives}\n\n`;
   }
 
-  if (crossSource) {
-    const content = crossSource.analysis_content;
-    const excerpt =
-      content.length > 400 ? content.slice(0, 400) + '...' : content;
-    markdown += `## Cross-Source Analysis\n${excerpt}\n\n`;
+  // Include all analysis passes in full
+  if (analyses && analyses.length > 0) {
+    for (const analysis of analyses) {
+      const label = analysis.pass_type
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (c: string) => c.toUpperCase());
+      markdown += `## ${label}\n\n`;
+      markdown += `${analysis.analysis_content}\n\n`;
+    }
   }
 
   return NextResponse.json({ markdown });
