@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Grid3X3, Users, MessageSquare } from 'lucide-react';
+import { Search, Grid3X3, Users, MessageSquare, ArrowLeft } from 'lucide-react';
 import { UserMenu } from '@/components/auth/user-menu';
 import { ApifyCreditBadge } from '@/components/layout/apify-credit-badge';
 import { cn } from '@/lib/utils';
@@ -94,6 +94,13 @@ export function NavHeader({ email }: { email: string | null }) {
         </div>
         <div className="flex items-center gap-2">
           <ApifyCreditBadge />
+          <a
+            href="https://www.aiden.services/dashboard"
+            className="flex items-center gap-1.5 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF4400] hover:text-[#FF4400]"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Hub
+          </a>
           <UserMenu email={email} />
         </div>
       </div>
