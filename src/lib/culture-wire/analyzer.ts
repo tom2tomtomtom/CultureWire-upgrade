@@ -1,5 +1,5 @@
 import { callAnthropicWithFallback } from '@/lib/anthropic';
-import { scoreItems, normalizeItems, buildScoredItemsSummary } from '@/lib/scoring';
+import { scoreItems, normalizeItems, buildScoredItemsSummary, boostRelevance } from '@/lib/scoring';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildOpportunityAnalysisPrompt, buildTensionDetectionPrompt, buildStrategicBriefPrompt } from './prompts';
 import { enrichTopResults } from './perplexity';
@@ -8,7 +8,7 @@ import { buildRTPAnalysisPrompt } from './right-to-play';
 import type { BrandContext, CultureWireResult, ScoredOpportunity, CulturalTension } from '@/lib/types';
 
 
-function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean = false): string {
+function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean = false, relevanceKeywords: string[] = []): string {
   const sections: string[] = [];
 
   const byPlatform = new Map<string, CultureWireResult[]>();
@@ -22,6 +22,11 @@ function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean =
     const allItems = platformResults.flatMap((r) => r.raw_data);
     const normalized = normalizeItems(platform, allItems);
     let scored = scoreItems(platform, normalized);
+
+    // Boost relevance for brand/category keywords so research-subject content ranks higher
+    if (relevanceKeywords.length > 0) {
+      scored = boostRelevance(scored, relevanceKeywords);
+    }
 
     // Apply geo boost if enabled (Phase 6)
     if (applyGeoBoost) {
@@ -117,8 +122,16 @@ export async function runAnalysisPipeline(
     throw new Error('No results found for analysis');
   }
 
-  // Apply geo boost for AU searches
-  const dataPayload = buildDataPayload(results as CultureWireResult[], true);
+  // Build relevance keywords from brand context so brand-related content ranks higher
+  const relevanceKeywords = [
+    brandName,
+    ...context.keywords.brand,
+    ...context.keywords.category,
+    ...context.competitors,
+  ].filter(Boolean);
+
+  // Apply geo boost and relevance boosting for AU searches
+  const dataPayload = buildDataPayload(results as CultureWireResult[], true, relevanceKeywords);
 
   // Perplexity enrichment: enrich top opportunities before Claude analysis
   let perplexityContext = '';
