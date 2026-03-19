@@ -243,14 +243,17 @@ export async function POST(request: NextRequest) {
         // Keep content fields at full length, truncate metadata/nested objects
         const truncateItem = (item: Record<string, unknown>) => {
           const truncated: Record<string, unknown> = {};
+          // Strip lone surrogates that break JSON serialization
+          const sanitize = (s: string) => s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
           for (const [key, value] of Object.entries(item)) {
             // Skip internal scoring fields from the raw data sent to Claude
             if (key.startsWith('_')) continue;
             if (typeof value === 'string') {
+              const clean = sanitize(value);
               const limit = CONTENT_FIELDS.has(key) ? 1500 : 300;
-              truncated[key] = value.length > limit ? value.slice(0, limit) + '...' : value;
+              truncated[key] = clean.length > limit ? clean.slice(0, limit) + '...' : clean;
             } else if (typeof value === 'object' && value !== null) {
-              const json = JSON.stringify(value);
+              const json = sanitize(JSON.stringify(value));
               truncated[key] = json.length > 500 ? json.slice(0, 500) + '...' : value;
             } else {
               truncated[key] = value;
