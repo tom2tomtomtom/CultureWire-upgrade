@@ -82,13 +82,13 @@ export default function CultureWirePage() {
 
       {/* Feature Cards Section */}
       <section className="py-16 px-8">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <h2 className="text-4xl font-semibold text-center mb-4">What do you want to search today?</h2>
           <p className="text-lg text-gray-500 text-center max-w-xl mx-auto mb-12">
             Choose your search type to discover cultural opportunities and brand insights.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             {/* Brand Search Card */}
             <div
               className={`group cursor-pointer rounded-2xl border p-6 transition-all hover:-translate-y-1 hover:shadow-xl ${
@@ -130,6 +130,29 @@ export default function CultureWirePage() {
                 <Image
                   src="/images/category-search.png"
                   alt="Category Search"
+                  width={400}
+                  height={250}
+                  className="w-full object-cover"
+                />
+              </div>
+            </div>
+
+            {/* Research Agent Card */}
+            <div
+              className="group cursor-pointer rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
+              onClick={() => router.push('/research')}
+            >
+              <h3 className="text-2xl font-semibold mb-2">Research Agent</h3>
+              <p className="text-gray-500 mb-4">
+                Brief the AI to run deep research across platforms and deliver strategic reports.
+              </p>
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wide mb-6">
+                Learn More <ArrowRight className="h-4 w-4" />
+              </span>
+              <div className="rounded-xl overflow-hidden">
+                <Image
+                  src="/images/research-agent.png"
+                  alt="Research Agent"
                   width={400}
                   height={250}
                   className="w-full object-cover"
@@ -211,7 +234,7 @@ export default function CultureWirePage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-gray-900 text-white py-12 px-8">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-start gap-8">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start gap-8">
           <div className="max-w-md">
             <Image
               src="/images/cw-logo-white.svg"
@@ -229,7 +252,7 @@ export default function CultureWirePage() {
             <a href="/culture-wire/influencers" className="text-gray-400 hover:text-white transition-colors">Influencer Hub</a>
           </nav>
         </div>
-        <div className="max-w-5xl mx-auto mt-8 pt-8 border-t border-gray-800 flex justify-between text-xs text-gray-500">
+        <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-gray-800 flex justify-between text-xs text-gray-500">
           <span>&copy; 2025 Culture Wire. All rights reserved.</span>
           <span>Powered by alt/shift/</span>
         </div>
