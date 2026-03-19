@@ -103,13 +103,13 @@ export default function CultureWirePage() {
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wide mb-6">
                 Learn More <ArrowRight className="h-4 w-4" />
               </span>
-              <div className="rounded-xl overflow-hidden">
+              <div className="rounded-xl overflow-hidden aspect-square">
                 <Image
                   src="/images/brand-search.png"
                   alt="Brand Search"
                   width={400}
-                  height={250}
-                  className="w-full object-cover"
+                  height={400}
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>
@@ -126,13 +126,13 @@ export default function CultureWirePage() {
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wide mb-6">
                 Learn More <ArrowRight className="h-4 w-4" />
               </span>
-              <div className="rounded-xl overflow-hidden">
+              <div className="rounded-xl overflow-hidden aspect-square">
                 <Image
                   src="/images/category-search.png"
                   alt="Category Search"
                   width={400}
-                  height={250}
-                  className="w-full object-cover"
+                  height={400}
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>
@@ -149,13 +149,13 @@ export default function CultureWirePage() {
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wide mb-6">
                 Learn More <ArrowRight className="h-4 w-4" />
               </span>
-              <div className="rounded-xl overflow-hidden">
+              <div className="rounded-xl overflow-hidden aspect-square">
                 <Image
                   src="/images/research-agent.png"
                   alt="Research Agent"
                   width={400}
-                  height={250}
-                  className="w-full object-cover"
+                  height={400}
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>
@@ -172,13 +172,13 @@ export default function CultureWirePage() {
               <span className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wide mb-6">
                 Learn More <ArrowRight className="h-4 w-4" />
               </span>
-              <div className="rounded-xl overflow-hidden">
+              <div className="rounded-xl overflow-hidden aspect-square">
                 <Image
                   src="/images/influencer-hub.png"
                   alt="Influencer Hub"
                   width={400}
-                  height={250}
-                  className="w-full object-cover"
+                  height={400}
+                  className="w-full h-full object-cover"
                 />
               </div>
             </div>
