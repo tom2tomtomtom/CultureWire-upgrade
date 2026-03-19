@@ -140,7 +140,7 @@ export default function CultureWirePage() {
             {/* Research Agent Card */}
             <div
               className="group cursor-pointer rounded-2xl border border-gray-200 p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl"
-              onClick={() => router.push('/research')}
+              onClick={() => router.push('/project/new')}
             >
               <h3 className="text-2xl font-semibold mb-2">Research Agent</h3>
               <p className="text-gray-500 mb-4">
