@@ -61,8 +61,10 @@ export default function AdminPage() {
 
   if (!isAdmin || loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export default function AdminPage() {
   const processed = requests.filter((r) => r.status !== 'pending');
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Shield className="h-6 w-6" />

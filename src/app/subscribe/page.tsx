@@ -31,7 +31,7 @@ export default function SubscribePage() {
   }
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center">
+    <div className="mx-auto max-w-5xl px-4 py-6 flex min-h-[70vh] items-center justify-center">
       <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
         {/* Header */}
         <div className="mb-8 text-center">

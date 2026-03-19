@@ -219,9 +219,11 @@ export default function ProjectPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-[60vh]" />
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-[60vh]" />
+        </div>
       </div>
     );
   }
@@ -231,7 +233,7 @@ export default function ProjectPage() {
   const showChat = project.status === 'draft' || (project.status === 'planning' && !plan && !isGeneratingPlan);
 
   return (
-    <div className={showChat ? 'flex flex-col h-[calc(100vh-6rem)]' : 'space-y-6'}>
+    <div className={`mx-auto max-w-5xl px-4 py-6 ${showChat ? 'flex flex-col h-[calc(100vh-6rem)]' : 'space-y-6'}`}>
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground transition-colors">

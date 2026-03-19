@@ -35,7 +35,7 @@ export default function CategoryResultsPage() {
 
   if (!category) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto max-w-5xl px-4 py-6 space-y-4">
         <p className="text-gray-500">Category not found.</p>
         <button
           onClick={() => router.push('/culture-wire/categories')}
@@ -82,7 +82,7 @@ export default function CategoryResultsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
       <div>
         <button
           onClick={() => router.push('/culture-wire/categories')}

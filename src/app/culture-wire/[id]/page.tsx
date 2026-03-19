@@ -89,8 +89,10 @@ export default function CultureWireDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        </div>
       </div>
     );
   }
@@ -100,7 +102,7 @@ export default function CultureWireDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold uppercase tracking-tight">

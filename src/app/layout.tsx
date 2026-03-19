@@ -13,8 +13,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AIDEN // Listen',
-  description: 'Cultural intelligence platform',
+  title: 'Culture Wire - AI-Powered Brand Intelligence',
+  description: 'AI-powered brand intelligence platform',
 };
 
 export default async function RootLayout({
@@ -30,7 +30,7 @@ export default async function RootLayout({
         <ThemeProvider>
           <TooltipProvider>
             <NavHeader email={session?.email ?? null} />
-            <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+            <main>{children}</main>
             <Toaster richColors position="bottom-right" />
           </TooltipProvider>
         </ThemeProvider>

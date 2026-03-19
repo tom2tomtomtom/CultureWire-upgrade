@@ -28,6 +28,18 @@ function buildDataPayload(results: CultureWireResult[], applyGeoBoost: boolean =
       scored = boostRelevance(scored, relevanceKeywords);
     }
 
+    // Filter out low-scoring irrelevant items (no keyword match + below median score)
+    if (relevanceKeywords.length > 0 && scored.length > 0) {
+      const scores = scored.map(i => i._score).sort((a, b) => a - b);
+      const medianScore = scores[Math.floor(scores.length / 2)];
+      scored = scored.filter(item => {
+        // Keep items that matched keywords (have relevance boost)
+        if ('_relevance_boost' in item) return true;
+        // Keep non-matching items only if they score above median
+        return item._score >= medianScore;
+      });
+    }
+
     // Apply geo boost if enabled (Phase 6)
     if (applyGeoBoost) {
       scored = scored.map((item) => {

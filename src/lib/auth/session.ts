@@ -1,9 +1,8 @@
-import { cookies } from 'next/headers';
-import { verifyGatewayJWT } from '@/lib/gateway-jwt';
+import { createServerClient } from '@/lib/supabase/server';
 
 export async function getSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('aiden-gw')?.value;
-  if (!token) return null;
-  return verifyGatewayJWT(token);
+  const supabase = await createServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  return { sub: user.id, email: user.email || '' };
 }

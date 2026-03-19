@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { Search, Grid3X3, Users, MessageSquare, ArrowLeft } from 'lucide-react';
 import { UserMenu } from '@/components/auth/user-menu';
 import { ApifyCreditBadge } from '@/components/layout/apify-credit-badge';
@@ -28,9 +29,7 @@ export function NavHeader({ email }: { email: string | null }) {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/culture-wire" className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight text-gray-900">
-              Culture Wire
-            </span>
+            <Image src="/images/cw-logo-black.svg" alt="Culture Wire" width={120} height={32} priority />
             <span className={cn('ml-2 inline-block h-2 w-2 rounded-full', {
               'bg-gray-500': healthStatus === 'loading',
               'bg-green-500': healthStatus === 'healthy',

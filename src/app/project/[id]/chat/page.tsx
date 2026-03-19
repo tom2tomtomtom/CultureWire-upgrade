@@ -34,9 +34,11 @@ export default function ProjectChatPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-[60vh]" />
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-[60vh]" />
+        </div>
       </div>
     );
   }
@@ -44,7 +46,7 @@ export default function ProjectChatPage() {
   if (!project) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)]">
+    <div className="mx-auto max-w-5xl px-4 py-6 flex flex-col h-[calc(100vh-6rem)]">
       <div className="flex items-center gap-2 mb-2">
         <Button variant="ghost" size="icon" asChild>
           <Link href={`/project/${projectId}`}>

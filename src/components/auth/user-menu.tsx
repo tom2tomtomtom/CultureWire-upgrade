@@ -28,10 +28,11 @@ export function UserMenu({ email }: { email: string | null }) {
     .slice(0, 2)
     .toUpperCase();
 
-  const gatewayUrl = process.env.NEXT_PUBLIC_GATEWAY_URL || 'https://aiden.services';
-
-  function handleLogout() {
-    window.location.href = `${gatewayUrl}/auth/logout`;
+  async function handleLogout() {
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = '/login';
   }
 
   return (

@@ -47,7 +47,7 @@ export default function InfluencersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl px-4 py-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold uppercase tracking-tight">
           <span className="text-[#8B3F4F]">//</span> Influencer Hub
