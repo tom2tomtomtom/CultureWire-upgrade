@@ -135,8 +135,9 @@ export async function POST(request: NextRequest) {
 
   const { projectId } = parsed.data;
   const supabase = await createServerClient();
+  const adminSupabase = createAdminClient();
 
-  // Verify project belongs to authenticated user
+  // Verify project belongs to authenticated user (RLS-scoped check)
   const { data: projectCheck } = await supabase
     .from('projects')
     .select('id')
@@ -148,8 +149,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Project not found' }, { status: 404 });
   }
 
-  // Validate spec and results exist before committing
-  const { data: spec } = await supabase
+  // Use admin client for data queries — scrape_results are inserted by
+  // background processJob (admin client), so RLS hides them from user client
+  const { data: spec } = await adminSupabase
     .from('research_specs')
     .select('*')
     .eq('project_id', projectId)
@@ -161,7 +163,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No research spec found' }, { status: 404 });
   }
 
-  const { data: results } = await supabase
+  const { data: results } = await adminSupabase
     .from('scrape_results')
     .select('*')
     .eq('project_id', projectId);
@@ -171,12 +173,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Set project status and clean up previous results
-  await supabase
+  await adminSupabase
     .from('projects')
     .update({ status: 'synthesizing' })
     .eq('id', projectId);
 
-  await supabase
+  await adminSupabase
     .from('analysis_results')
     .delete()
     .eq('project_id', projectId);
