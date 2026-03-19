@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
 import type { ChatMessage, ResearchSpec } from '@/lib/types';
 
 export function useChat(projectId: string) {
@@ -72,7 +73,16 @@ export function useChat(projectId: string) {
             try {
               const parsed = JSON.parse(data);
               if (parsed.error) {
-                throw new Error(typeof parsed.error === 'string' ? parsed.error : 'API error');
+                const errMsg = typeof parsed.error === 'string' ? parsed.error : 'API error';
+                if (errMsg.includes('credit balance') || errMsg.includes('billing')) {
+                  toast.error('API credits exhausted', {
+                    description: 'The AI service has run out of credits. Please contact your administrator to top up.',
+                    duration: 10000,
+                  });
+                } else {
+                  toast.error('Research failed', { description: errMsg });
+                }
+                throw new Error(errMsg);
               }
               if (parsed.text) {
                 accumulated += parsed.text;
@@ -81,26 +91,36 @@ export function useChat(projectId: string) {
               if (parsed.research_spec) {
                 setResearchSpec(parsed.research_spec);
               }
-            } catch {
-              // Skip malformed lines
+            } catch (parseErr) {
+              // Re-throw if it's our own error from above
+              if (parseErr instanceof Error && parseErr.message !== 'Unexpected token') {
+                throw parseErr;
+              }
+              // Skip genuinely malformed JSON lines
             }
           }
         }
       }
 
       // Add assistant message
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        project_id: projectId,
-        role: 'assistant',
-        content: accumulated,
-        metadata: {},
-        created_at: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (accumulated) {
+        const assistantMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          project_id: projectId,
+          role: 'assistant',
+          content: accumulated,
+          metadata: {},
+          created_at: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
     } catch (error) {
       console.error('[chat] Send error:', error);
       if ((error as Error).name !== 'AbortError') {
+        const errMsg = (error as Error).message || 'Something went wrong';
+        if (!errMsg.includes('credit balance')) {
+          toast.error('Chat error', { description: errMsg });
+        }
         const errorMessage: ChatMessage = {
           id: crypto.randomUUID(),
           project_id: projectId,
