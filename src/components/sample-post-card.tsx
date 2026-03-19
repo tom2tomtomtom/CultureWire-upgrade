@@ -14,14 +14,14 @@ export interface SamplePost {
 }
 
 const platformColors: Record<string, string> = {
-  reddit: 'border-orange-500/40 bg-orange-500/5',
-  youtube: 'border-red-500/40 bg-red-500/5',
-  tiktok: 'border-cyan-500/40 bg-cyan-500/5',
-  instagram: 'border-pink-500/40 bg-pink-500/5',
-  trustpilot: 'border-green-500/40 bg-green-500/5',
-  twitter: 'border-blue-500/40 bg-blue-500/5',
-  linkedin: 'border-blue-700/40 bg-blue-700/5',
-  google_trends: 'border-yellow-500/40 bg-yellow-500/5',
+  reddit: 'border-orange-500/40 bg-orange-50',
+  youtube: 'border-red-500/40 bg-red-50',
+  tiktok: 'border-cyan-500/40 bg-cyan-50',
+  instagram: 'border-pink-500/40 bg-pink-50',
+  trustpilot: 'border-green-500/40 bg-green-50',
+  twitter: 'border-blue-500/40 bg-blue-50',
+  linkedin: 'border-blue-700/40 bg-blue-50',
+  google_trends: 'border-yellow-500/40 bg-yellow-50',
 };
 
 const sentimentDot: Record<string, string> = {
@@ -31,32 +31,32 @@ const sentimentDot: Record<string, string> = {
 };
 
 export function SamplePostCard({ post }: { post: SamplePost }) {
-  const colorClass = platformColors[post.platform] || 'border-[#2a2a38] bg-[#0a0a0f]';
+  const colorClass = platformColors[post.platform] || 'border-gray-200 bg-gray-50';
   const displayText = post.title || post.text || '';
   const truncated = displayText.length > 200 ? displayText.slice(0, 200) + '...' : displayText;
 
   return (
-    <div className={`border ${colorClass} p-3 space-y-1.5`}>
+    <div className={`border ${colorClass} p-3 space-y-1.5 rounded-lg`}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-xs text-[#ccccdd] leading-relaxed">{truncated}</p>
+        <p className="text-xs text-gray-700 leading-relaxed">{truncated}</p>
         {post.url && (
           <a
             href={post.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 text-[#555566] hover:text-[#FF4400] transition-colors"
+            className="flex-shrink-0 text-gray-400 hover:text-[#8B3F4F] transition-colors"
           >
             <ExternalLink className="h-3 w-3" />
           </a>
         )}
       </div>
-      <div className="flex items-center gap-2 text-[10px] text-[#666677]">
+      <div className="flex items-center gap-2 text-[10px] text-gray-500">
         {post.author && <span>@{post.author}</span>}
-        {post.author && <span className="text-[#333344]">/</span>}
-        <span className="font-mono font-bold text-[#999aaa]">{post.engagement}</span>
+        {post.author && <span className="text-gray-300">/</span>}
+        <span className="font-mono font-bold text-gray-600">{post.engagement}</span>
         {post.date && (
           <>
-            <span className="text-[#333344]">/</span>
+            <span className="text-gray-300">/</span>
             <span>{post.date}</span>
           </>
         )}

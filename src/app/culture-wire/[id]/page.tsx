@@ -25,8 +25,8 @@ function statusColor(status: string) {
     case 'collecting': return 'border-blue-500 text-blue-400 bg-blue-500/10';
     case 'analyzing': return 'border-amber-500 text-amber-400 bg-amber-500/10';
     case 'complete': return 'border-green-500 text-green-400 bg-green-500/10';
-    case 'failed': return 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10';
-    default: return 'border-[#2a2a38] text-[#888899]';
+    case 'failed': return 'border-[#8B3F4F] text-[#8B3F4F] bg-[#8B3F4F]/10';
+    default: return 'border-gray-200 text-gray-500';
   }
 }
 
@@ -90,13 +90,13 @@ export default function CultureWireDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#888899]" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
       </div>
     );
   }
 
   if (!search) {
-    return <p className="py-10 text-center text-[#888899]">Search not found.</p>;
+    return <p className="py-10 text-center text-gray-500">Search not found.</p>;
   }
 
   return (
@@ -104,9 +104,9 @@ export default function CultureWireDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold uppercase tracking-tight">
-            <span className="text-[#FF0000]">//</span> {search.brand_name}
+            <span className="text-[#8B3F4F]">//</span> {search.brand_name}
           </h1>
-          <p className="mt-1 text-sm font-mono text-[#888899]">
+          <p className="mt-1 text-sm font-mono text-gray-500">
             {search.geo} &middot; {search.platforms.join(' / ')} &middot;{' '}
             {new Date(search.created_at).toLocaleString()}
           </p>
@@ -116,7 +116,7 @@ export default function CultureWireDetailPage() {
             <button
               onClick={handleCancel}
               disabled={cancelling}
-              className="flex items-center gap-1.5 border border-[#FF0000]/50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#FF0000] transition-colors hover:bg-[#FF0000]/10 disabled:opacity-40"
+              className="flex items-center gap-1.5 rounded-xl border border-[#8B3F4F]/50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-[#8B3F4F] transition-colors hover:bg-[#8B3F4F]/10 disabled:opacity-40"
             >
               {cancelling ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -133,23 +133,23 @@ export default function CultureWireDetailPage() {
       </div>
 
       {search.brand_context && (
-        <div className="border border-[#2a2a38] bg-[#111118] p-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Category</p>
-              <p className="mt-1 text-white">{search.brand_context.category}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Category</p>
+              <p className="mt-1 text-gray-900">{search.brand_context.category}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Tone</p>
-              <p className="mt-1 text-white">{search.brand_context.tone}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Tone</p>
+              <p className="mt-1 text-gray-900">{search.brand_context.tone}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Values</p>
-              <p className="mt-1 text-white">{search.brand_context.brand_values.join(', ')}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Values</p>
+              <p className="mt-1 text-gray-900">{search.brand_context.brand_values.join(', ')}</p>
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-[#888899]">Competitors</p>
-              <p className="mt-1 text-white">{search.brand_context.competitors.join(', ')}</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-500">Competitors</p>
+              <p className="mt-1 text-gray-900">{search.brand_context.competitors.join(', ')}</p>
             </div>
           </div>
         </div>
@@ -165,10 +165,10 @@ export default function CultureWireDetailPage() {
       )}
 
       {search.status === 'failed' && (
-        <div className="border border-[#FF0000]/30 bg-[#FF0000]/5 p-8 text-center">
-          <p className="text-[#FF0000] font-bold uppercase tracking-widest">Search failed. Please try again.</p>
+        <div className="rounded-xl border border-[#8B3F4F]/30 bg-[#8B3F4F]/5 p-8 text-center shadow-sm">
+          <p className="text-[#8B3F4F] font-bold uppercase tracking-widest">Search failed. Please try again.</p>
           {search.result_summary && 'error' in search.result_summary && (
-            <p className="mt-2 text-sm text-[#888899]">
+            <p className="mt-2 text-sm text-gray-500">
               {friendlyError(String(search.result_summary.error))}
             </p>
           )}
@@ -181,7 +181,7 @@ export default function CultureWireDetailPage() {
                 console.error('Retry failed:', err);
               }
             }}
-            className="mt-4 border border-[#FF0000] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#FF0000] transition-colors hover:bg-[#FF0000]/10"
+            className="mt-4 rounded-xl border border-[#8B3F4F] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#8B3F4F] transition-colors hover:bg-[#8B3F4F]/10"
           >
             Retry Analysis
           </button>

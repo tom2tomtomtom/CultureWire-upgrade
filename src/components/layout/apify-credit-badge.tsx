@@ -30,21 +30,21 @@ export function ApifyCreditBadge() {
 
   return (
     <div
-      className={`flex items-center gap-1.5 border px-2 py-1 text-[10px] font-mono uppercase ${
+      className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-mono ${
         isCritical
-          ? 'border-[#FF0000] text-[#FF0000] bg-[#FF0000]/10'
+          ? 'border-[#8B3F4F] text-[#8B3F4F] bg-[#8B3F4F]/10'
           : isLow
             ? 'border-amber-500 text-amber-400 bg-amber-500/10'
-            : 'border-[#2a2a38] text-[#888899]'
+            : 'border-gray-200 text-gray-500'
       }`}
       title={`Apify credits: $${remaining.toFixed(2)} of $${total.toFixed(2)} remaining`}
     >
       <Zap className="h-2.5 w-2.5" />
       <span>${remaining.toFixed(2)}</span>
-      <div className="h-1 w-8 bg-[#2a2a38]">
+      <div className="h-1 w-8 rounded-full bg-gray-200">
         <div
-          className={`h-1 transition-all ${
-            isCritical ? 'bg-[#FF0000]' : isLow ? 'bg-amber-500' : 'bg-green-500'
+          className={`h-1 rounded-full transition-all ${
+            isCritical ? 'bg-[#8B3F4F]' : isLow ? 'bg-amber-500' : 'bg-green-500'
           }`}
           style={{ width: `${Math.min(percentUsed, 100)}%` }}
         />

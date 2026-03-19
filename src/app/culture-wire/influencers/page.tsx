@@ -50,15 +50,15 @@ export default function InfluencersPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold uppercase tracking-tight">
-          <span className="text-[#FF0000]">//</span> Influencer Hub
+          <span className="text-[#8B3F4F]">//</span> Influencer Hub
         </h1>
-        <p className="mt-1 text-sm text-[#888899]">
+        <p className="mt-1 text-sm text-gray-500">
           Discover and manage influencers across categories. 3-tier system: Curated (70%) / Discovered AU (20%) / Global (10%)
         </p>
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#888899]">Category</p>
+        <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Category</p>
         <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.map((cat) => (
             <button
@@ -66,8 +66,8 @@ export default function InfluencersPage() {
               onClick={() => setSelectedCategory(cat.name)}
               className={`border px-2.5 py-1 text-xs uppercase transition-colors ${
                 selectedCategory === cat.name
-                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
-                  : 'border-[#2a2a38] text-[#555566] hover:text-[#888899]'
+                  ? 'border-[#8B3F4F] bg-[#8B3F4F]/10 text-[#8B3F4F]'
+                  : 'border-gray-200 text-gray-400 hover:text-gray-500'
               }`}
             >
               {cat.name}
@@ -77,12 +77,12 @@ export default function InfluencersPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-[#888899] py-8">
+        <div className="flex items-center gap-2 text-gray-500 py-8">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading influencers...
         </div>
       ) : influencers.length === 0 ? (
-        <div className="border border-[#2a2a38] bg-[#111118] p-8 text-center text-[#888899]">
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500 shadow-sm">
           No influencers found for {selectedCategory}. Run a search to discover new voices.
         </div>
       ) : (

@@ -24,15 +24,12 @@ export function NavHeader({ email }: { email: string | null }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b-2 border-[#FF0000] bg-[#0a0a0f]">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/culture-wire" className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight text-white uppercase">
-              AIDEN
-            </span>
-            <span className="text-lg font-light tracking-tight text-[#888899] uppercase">
-              // Listen
+            <span className="text-lg font-bold tracking-tight text-gray-900">
+              Culture Wire
             </span>
             <span className={cn('ml-2 inline-block h-2 w-2 rounded-full', {
               'bg-gray-500': healthStatus === 'loading',
@@ -45,10 +42,10 @@ export function NavHeader({ email }: { email: string | null }) {
             <Link
               href="/culture-wire"
               className={cn(
-                'flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-colors',
+                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
                 pathname === '/culture-wire' || pathname === '/'
-                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
-                  : 'border-transparent text-[#888899] hover:text-white hover:border-[#2a2a38]'
+                  ? 'border-[#8B3F4F] bg-[#8B3F4F]/10 text-[#8B3F4F]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
               )}
             >
               <Search className="h-3.5 w-3.5" />
@@ -57,10 +54,10 @@ export function NavHeader({ email }: { email: string | null }) {
             <Link
               href="/culture-wire/categories"
               className={cn(
-                'flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-colors',
+                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
                 pathname.startsWith('/culture-wire/categories')
-                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
-                  : 'border-transparent text-[#888899] hover:text-white hover:border-[#2a2a38]'
+                  ? 'border-[#8B3F4F] bg-[#8B3F4F]/10 text-[#8B3F4F]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
               )}
             >
               <Grid3X3 className="h-3.5 w-3.5" />
@@ -69,10 +66,10 @@ export function NavHeader({ email }: { email: string | null }) {
             <Link
               href="/"
               className={cn(
-                'flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-colors',
+                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
                 pathname.startsWith('/project')
-                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
-                  : 'border-transparent text-[#888899] hover:text-white hover:border-[#2a2a38]'
+                  ? 'border-[#8B3F4F] bg-[#8B3F4F]/10 text-[#8B3F4F]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
               )}
             >
               <MessageSquare className="h-3.5 w-3.5" />
@@ -81,10 +78,10 @@ export function NavHeader({ email }: { email: string | null }) {
             <Link
               href="/culture-wire/influencers"
               className={cn(
-                'flex items-center gap-1.5 border px-3 py-1.5 text-xs font-medium uppercase tracking-wider transition-colors',
+                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
                 pathname.startsWith('/culture-wire/influencers')
-                  ? 'border-[#FF0000] bg-[#FF0000]/10 text-[#FF0000]'
-                  : 'border-transparent text-[#888899] hover:text-white hover:border-[#2a2a38]'
+                  ? 'border-[#8B3F4F] bg-[#8B3F4F]/10 text-[#8B3F4F]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
               )}
             >
               <Users className="h-3.5 w-3.5" />
@@ -96,7 +93,7 @@ export function NavHeader({ email }: { email: string | null }) {
           <ApifyCreditBadge />
           <a
             href="https://www.aiden.services/dashboard"
-            className="flex items-center gap-1.5 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF4400] hover:text-[#FF4400]"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:border-[#8B3F4F] hover:text-[#8B3F4F]"
           >
             <ArrowLeft className="h-3 w-3" />
             Hub

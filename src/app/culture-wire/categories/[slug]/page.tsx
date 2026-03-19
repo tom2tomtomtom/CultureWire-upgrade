@@ -36,10 +36,10 @@ export default function CategoryResultsPage() {
   if (!category) {
     return (
       <div className="space-y-4">
-        <p className="text-[#888899]">Category not found.</p>
+        <p className="text-gray-500">Category not found.</p>
         <button
           onClick={() => router.push('/culture-wire/categories')}
-          className="flex items-center gap-2 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] hover:border-[#FF0000] hover:text-[#FF0000]"
+          className="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-gray-500 hover:border-[#8B3F4F] hover:text-[#8B3F4F]"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to categories
@@ -86,27 +86,27 @@ export default function CategoryResultsPage() {
       <div>
         <button
           onClick={() => router.push('/culture-wire/categories')}
-          className="mb-2 flex items-center gap-1 text-xs text-[#888899] hover:text-[#FF0000] transition-colors"
+          className="mb-2 flex items-center gap-1 text-xs text-gray-500 hover:text-[#8B3F4F] transition-colors"
         >
           <ArrowLeft className="h-3 w-3" />
           Categories
         </button>
         <h1 className="text-2xl font-bold uppercase tracking-tight">
-          <span className="text-[#FF0000]">//</span> {category.name}
+          <span className="text-[#8B3F4F]">//</span> {category.name}
         </h1>
-        <p className="mt-1 text-sm font-mono text-[#888899]">
+        <p className="mt-1 text-sm font-mono text-gray-500">
           {category.group} &middot; {category.geo_scope.toUpperCase()} &middot; {category.keywords.length} search terms
         </p>
       </div>
 
-      <div className="border border-[#2a2a38] bg-[#111118]">
-        <div className="border-b border-[#2a2a38] px-4 py-3">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#888899]">Search Terms</h3>
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-4 py-3">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Search Terms</h3>
         </div>
         <div className="p-4">
           <div className="flex flex-wrap gap-1.5">
             {category.keywords.map((kw) => (
-              <span key={kw} className="border border-[#2a2a38] bg-[#0a0a0f] px-2 py-0.5 text-xs font-mono text-[#888899]">
+              <span key={kw} className="border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-mono text-gray-500">
                 {kw}
               </span>
             ))}
@@ -114,13 +114,13 @@ export default function CategoryResultsPage() {
         </div>
       </div>
 
-      <div className="border border-[#2a2a38] bg-[#111118]">
-        <div className="border-b border-[#2a2a38] px-4 py-3">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-[#888899]">Run Category Search</h3>
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-gray-200 px-4 py-3">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500">Run Category Search</h3>
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#888899]">Platforms</p>
+            <p className="mb-2 text-xs font-bold uppercase tracking-widest text-gray-500">Platforms</p>
             <div className="flex gap-1">
               {PLATFORMS.map((p) => (
                 <button
@@ -129,8 +129,8 @@ export default function CategoryResultsPage() {
                   onClick={() => !loading && togglePlatform(p)}
                   className={`border px-2.5 py-1 text-xs uppercase transition-colors ${
                     platforms.includes(p)
-                      ? 'border-[#FF4400]/50 bg-[#FF4400]/10 text-[#FF4400]'
-                      : 'border-[#2a2a38] text-[#555566] hover:text-[#888899]'
+                      ? 'border-[#A85566]/50 bg-[#A85566]/10 text-[#A85566]'
+                      : 'border-gray-200 text-gray-400 hover:text-gray-500'
                   }`}
                 >
                   {p}
@@ -139,12 +139,12 @@ export default function CategoryResultsPage() {
             </div>
           </div>
 
-          {error && <p className="text-sm text-[#FF0000]">{error}</p>}
+          {error && <p className="text-sm text-[#8B3F4F]">{error}</p>}
 
           <button
             onClick={handleSearch}
             disabled={loading || platforms.length === 0}
-            className="border-2 border-[#FF0000] bg-[#FF0000] px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#FF0000]/90 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-xl border-2 border-[#8B3F4F] bg-[#8B3F4F] px-6 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-[#8B3F4F]/90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -160,22 +160,22 @@ export default function CategoryResultsPage() {
 
       {!loadingHistory && pastSearches.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-[#888899]">Previous Searches</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Previous Searches</h2>
           <div className="grid gap-2">
             {pastSearches.map((search) => (
               <div
                 key={search.id}
-                className="cursor-pointer border border-[#2a2a38] bg-[#111118] p-4 transition-colors hover:border-[#FF0000]/50"
+                className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-[#8B3F4F]/50 hover:shadow-md"
                 onClick={() => router.push(`/culture-wire/${search.id}`)}
               >
                 <div className="flex items-center justify-between">
                   <div className="text-sm">
                     <p className="font-bold uppercase tracking-wide">{search.brand_name}</p>
-                    <p className="mt-1 text-xs font-mono text-[#888899]">
+                    <p className="mt-1 text-xs font-mono text-gray-500">
                       {new Date(search.created_at).toLocaleDateString()} &middot; {search.platforms.join(' / ')}
                     </p>
                   </div>
-                  <Badge variant="outline" className="border-[#2a2a38] text-[#888899]">{search.status}</Badge>
+                  <Badge variant="outline" className="border-gray-200 text-gray-500">{search.status}</Badge>
                 </div>
               </div>
             ))}

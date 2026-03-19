@@ -155,12 +155,12 @@ export function ShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#111118] border-[#2a2a38] rounded-none sm:rounded-none max-w-md">
+      <DialogContent className="bg-white border-gray-200 rounded-xl sm:rounded-xl max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xs font-bold uppercase tracking-widest text-white">
+          <DialogTitle className="text-xs font-bold uppercase tracking-widest text-gray-900">
             Share Report
           </DialogTitle>
-          <DialogDescription className="text-xs text-[#888899] truncate">
+          <DialogDescription className="text-xs text-gray-500 truncate">
             {reportTitle}
           </DialogDescription>
         </DialogHeader>
@@ -168,7 +168,7 @@ export function ShareDialog({
         <div className="space-y-4">
           {/* Email input */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-[#888899]">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
               Share via email
             </label>
             <div className="flex gap-2">
@@ -178,12 +178,12 @@ export function ShareDialog({
                 onChange={(e) => setEmailInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleShare()}
                 placeholder="email@example.com, another@example.com"
-                className="flex-1 border border-[#2a2a38] bg-[#0a0a0f] px-3 py-1.5 text-sm text-white placeholder:text-[#555566] focus:border-[#FF4400] focus:outline-none"
+                className="flex-1 border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#8B3F4F] focus:outline-none rounded-lg"
               />
               <button
                 onClick={handleShare}
                 disabled={isSharing || !emailInput.trim()}
-                className="flex items-center gap-1.5 border border-[#FF0000] bg-[#FF0000]/10 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#FF0000] transition-colors hover:bg-[#FF0000]/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 border border-[#8B3F4F] bg-[#8B3F4F]/10 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#8B3F4F] transition-colors hover:bg-[#8B3F4F]/20 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg"
               >
                 {isSharing ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -199,7 +199,7 @@ export function ShareDialog({
           <div className="flex gap-2">
             <button
               onClick={handleCopyLink}
-              className="flex flex-1 items-center justify-center gap-1.5 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF4400] hover:text-[#FF4400]"
+              className="flex flex-1 items-center justify-center gap-1.5 border border-gray-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:border-[#8B3F4F] hover:text-[#8B3F4F] rounded-lg"
             >
               <Link2 className="h-3 w-3" />
               Copy Link
@@ -207,7 +207,7 @@ export function ShareDialog({
             <button
               onClick={handleSendToChat}
               disabled={isSendingToChat}
-              className="flex flex-1 items-center justify-center gap-1.5 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF4400] hover:text-[#FF4400] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-1 items-center justify-center gap-1.5 border border-gray-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:border-[#8B3F4F] hover:text-[#8B3F4F] disabled:opacity-40 disabled:cursor-not-allowed rounded-lg"
             >
               {isSendingToChat ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -220,30 +220,30 @@ export function ShareDialog({
 
           {/* Current shares */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-[#888899]">
+            <label className="text-xs font-bold uppercase tracking-widest text-gray-500">
               Shared with
             </label>
             {isLoadingShares ? (
-              <div className="flex items-center gap-2 py-3 text-xs text-[#555566]">
+              <div className="flex items-center gap-2 py-3 text-xs text-gray-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading...
               </div>
             ) : shares.length === 0 ? (
-              <p className="py-2 text-xs text-[#555566]">Not shared with anyone yet.</p>
+              <p className="py-2 text-xs text-gray-400">Not shared with anyone yet.</p>
             ) : (
               <div className="max-h-32 space-y-1 overflow-y-auto">
                 {shares.map((share) => (
                   <div
                     key={share.id}
-                    className="flex items-center justify-between border border-[#2a2a38] bg-[#0a0a0f] px-3 py-1.5"
+                    className="flex items-center justify-between border border-gray-200 bg-gray-50 px-3 py-1.5 rounded-lg"
                   >
-                    <span className="text-xs text-[#e8e8e8] truncate">
+                    <span className="text-xs text-gray-900 truncate">
                       {share.shared_with}
                     </span>
                     <button
                       onClick={() => handleRemoveShare(share.shared_with)}
                       disabled={removingEmail === share.shared_with}
-                      className="ml-2 text-[#555566] transition-colors hover:text-[#FF0000] disabled:opacity-40"
+                      className="ml-2 text-gray-400 transition-colors hover:text-[#8B3F4F] disabled:opacity-40"
                     >
                       {removingEmail === share.shared_with ? (
                         <Loader2 className="h-3 w-3 animate-spin" />

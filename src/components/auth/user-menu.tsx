@@ -37,27 +37,27 @@ export function UserMenu({ email }: { email: string | null }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="relative flex h-8 w-8 items-center justify-center border border-[#2a2a38] bg-[#111118] text-xs font-bold font-mono text-[#888899] transition-colors hover:border-[#FF0000] hover:text-[#FF0000]">
+        <button className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-xs font-bold font-mono text-gray-500 transition-colors hover:border-[#8B3F4F] hover:text-[#8B3F4F]">
           {initials}
           {admin && (
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-[#FF4400] border border-[#0a0a0f]" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#A85566] border border-white" />
           )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-[#2a2a38] bg-[#111118]">
-        <DropdownMenuItem disabled className="text-xs text-[#888899]">
+      <DropdownMenuContent align="end" className="border-gray-200 bg-white">
+        <DropdownMenuItem disabled className="text-xs text-gray-500">
           <User className="mr-2 h-3 w-3" />
           {email}
           {admin && (
-            <span className="ml-2 border border-[#FF4400]/50 bg-[#FF4400]/10 px-1 py-0 text-[10px] text-[#FF4400]">
+            <span className="ml-2 rounded border border-[#A85566]/50 bg-[#A85566]/10 px-1 py-0 text-[10px] text-[#A85566]">
               Admin
             </span>
           )}
         </DropdownMenuItem>
         {admin && (
           <>
-            <DropdownMenuSeparator className="bg-[#2a2a38]" />
-            <DropdownMenuItem asChild className="text-xs uppercase tracking-wider">
+            <DropdownMenuSeparator className="bg-gray-200" />
+            <DropdownMenuItem asChild className="text-xs">
               <Link href="/admin">
                 <Shield className="mr-2 h-3.5 w-3.5" />
                 Admin Dashboard
@@ -65,8 +65,8 @@ export function UserMenu({ email }: { email: string | null }) {
             </DropdownMenuItem>
           </>
         )}
-        <DropdownMenuSeparator className="bg-[#2a2a38]" />
-        <DropdownMenuItem onClick={handleLogout} className="text-xs uppercase tracking-wider text-[#FF0000]">
+        <DropdownMenuSeparator className="bg-gray-200" />
+        <DropdownMenuItem onClick={handleLogout} className="text-xs text-[#8B3F4F]">
           <LogOut className="mr-2 h-3.5 w-3.5" />
           Sign out
         </DropdownMenuItem>

@@ -25,8 +25,8 @@ export default async function RootLayout({
   const session = await getSession();
 
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased bg-[#0a0a0f] text-[#e8e8e8]`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased bg-background text-foreground`}>
         <ThemeProvider>
           <TooltipProvider>
             <NavHeader email={session?.email ?? null} />

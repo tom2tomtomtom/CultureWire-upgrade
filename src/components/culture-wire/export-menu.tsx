@@ -20,12 +20,12 @@ export function ExportMenu({ searchId }: ExportMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 border border-[#2a2a38] px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#888899] transition-colors hover:border-[#FF0000] hover:text-[#FF0000]">
+        <button className="flex items-center gap-2 border border-gray-200 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-gray-500 transition-colors hover:border-[#8B3F4F] hover:text-[#8B3F4F] rounded-lg">
           <Download className="h-3.5 w-3.5" />
           Export
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="border-[#2a2a38] bg-[#111118]">
+      <DropdownMenuContent className="border-gray-200 bg-white">
         <DropdownMenuItem onClick={() => handleExport('csv')} className="text-xs uppercase tracking-wider">
           <Table className="mr-2 h-3.5 w-3.5" />
           CSV
