@@ -48,7 +48,7 @@ export function NavHeader({ email }: { email: string | null }) {
               )}
             >
               <Search className="h-3.5 w-3.5" />
-              Search
+              Brand
             </Link>
             <Link
               href="/culture-wire/categories"

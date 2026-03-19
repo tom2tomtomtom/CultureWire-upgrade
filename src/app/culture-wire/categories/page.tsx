@@ -1,5 +1,23 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CATEGORY_GROUPS } from '@/lib/culture-wire/categories';
+import { Loader2, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
+interface CultureWireSearch {
+  id: string;
+  brand_name: string;
+  status: string;
+  geo: string;
+  platforms: string[];
+  created_at: string;
+  search_type?: string;
+  category_slug?: string;
+  result_summary?: { total_items?: number };
+}
 
 const GROUP_COLORS: Record<string, string> = {
   'Consumer & Lifestyle': 'border-orange-500 text-orange-400 bg-orange-500/10',
@@ -12,7 +30,32 @@ const GROUP_COLORS: Record<string, string> = {
   'Social & Reactive': 'border-pink-500 text-pink-400 bg-pink-500/10',
 };
 
+function statusColor(status: string) {
+  switch (status) {
+    case 'complete': return 'border-green-500 text-green-600 bg-green-50';
+    case 'analyzing': return 'border-blue-500 text-blue-600 bg-blue-50';
+    case 'collecting': return 'border-amber-500 text-amber-600 bg-amber-50';
+    case 'failed': return 'border-red-500 text-red-600 bg-red-50';
+    default: return 'border-gray-300 text-gray-500';
+  }
+}
+
 export default function CategoriesPage() {
+  const router = useRouter();
+  const [searches, setSearches] = useState<CultureWireSearch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/culture-wire')
+      .then((r) => r.json())
+      .then((data) => {
+        const all = data.searches || [];
+        setSearches(all.filter((s: CultureWireSearch) => s.search_type === 'category'));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 space-y-8">
       <div>
@@ -64,6 +107,47 @@ export default function CategoriesPage() {
           </div>
         </div>
       ))}
+
+      {/* Previous Category Searches */}
+      <div className="mt-16 space-y-4">
+        <h2 className="text-xs font-bold uppercase tracking-widest text-gray-500">Previous Category Searches</h2>
+        {loading ? (
+          <div className="flex items-center gap-2 text-gray-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading...
+          </div>
+        ) : searches.length === 0 ? (
+          <p className="text-sm text-gray-500">No category searches yet. Select a category above to start.</p>
+        ) : (
+          <div className="grid gap-2">
+            {searches.map((search) => (
+              <div
+                key={search.id}
+                className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-[#8B3F4F]/50 hover:shadow-md"
+                onClick={() => router.push(`/culture-wire/${search.id}`)}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">{search.brand_name}</span>
+                  <Badge variant="outline" className={statusColor(search.status)}>
+                    {search.status}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(search.created_at).toLocaleDateString()}
+                  </span>
+                  <span className="font-mono">{search.geo}</span>
+                  <span>{search.platforms.join(' / ')}</span>
+                  {search.result_summary?.total_items && (
+                    <span className="text-[#A85566]">{search.result_summary.total_items} items</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
