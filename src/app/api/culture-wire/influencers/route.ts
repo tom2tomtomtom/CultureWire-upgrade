@@ -1,33 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
-import { getInfluencerFeed, addToCurated } from '@/lib/culture-wire/influencers';
+import { getInfluencersFromSheet, getSheetCategories } from '@/lib/google-sheets';
 import { getSession } from '@/lib/auth/session';
-import { isAdmin } from '@/lib/auth/admin';
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const category = request.nextUrl.searchParams.get('category') || '';
-  if (!category) return NextResponse.json({ error: 'Category required' }, { status: 400 });
 
-  const influencers = await getInfluencerFeed(category);
-  return NextResponse.json({ influencers });
-}
-
-export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const body = await request.json();
-  const result = await addToCurated({
-    ...body,
-    added_by: session.email,
-  });
-
-  if (!result) {
-    return NextResponse.json({ error: 'Failed to add influencer' }, { status: 500 });
+  // If no category, return all categories
+  if (!category) {
+    const categories = await getSheetCategories();
+    return NextResponse.json({ categories });
   }
 
-  return NextResponse.json({ id: result.id }, { status: 201 });
+  const allInfluencers = await getInfluencersFromSheet();
+  const filtered = allInfluencers
+    .filter((i) => i.category === category)
+    .map((i, idx) => ({
+      id: `sheet-${idx}-${i.handle}`,
+      name: i.name,
+      handle: i.handle,
+      platform: i.platform === 'unknown' ? 'instagram' : i.platform,
+      category: i.category,
+      tier: 'curated',
+      tier_display: 'Curated',
+      tier_color: '#8B3F4F',
+      followers: null,
+      engagement_rate: null,
+      geo: 'AU',
+      profile_url: i.profileUrl,
+    }));
+
+  return NextResponse.json({ influencers: filtered });
 }
