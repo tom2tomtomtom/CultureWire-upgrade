@@ -1,6 +1,7 @@
 import { ACTOR_REGISTRY, type PlannerParams } from '@/lib/actor-registry';
 import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect, collectNewsArticles, getApifyCreditBalance } from '@/lib/apify';
 import { createAdminClient } from '@/lib/supabase/server';
+import { sanitizeData } from '@/lib/utils';
 import type { BrandContext, CultureWireLayer, Platform } from '@/lib/types';
 import type { CategoryConfig } from './categories';
 
@@ -123,14 +124,15 @@ export async function runThreeLayerCollection(
         try {
           const { items, runId } = await collectFromPlatform(task.platform, task.layer, task.params);
           if (runId) batchRunIds.push(runId);
+          const cleanItems = sanitizeData(items);
 
           // Save to DB
           await supabase.from('culture_wire_results').insert({
             search_id: searchId,
             source_platform: task.platform,
             layer: task.layer,
-            raw_data: items,
-            item_count: items.length,
+            raw_data: cleanItems,
+            item_count: cleanItems.length,
           });
 
           return {
@@ -249,13 +251,14 @@ export async function runCategoryCollection(
       batch.map(async (task) => {
         try {
           const { items } = await collectFromPlatform(task.platform, task.layer, task.params);
+          const cleanItems = sanitizeData(items);
 
           await supabase.from('culture_wire_results').insert({
             search_id: searchId,
             source_platform: task.platform,
             layer: task.layer,
-            raw_data: items,
-            item_count: items.length,
+            raw_data: cleanItems,
+            item_count: cleanItems.length,
           });
 
           return { platform: task.platform, layer: task.layer, items, itemCount: items.length };

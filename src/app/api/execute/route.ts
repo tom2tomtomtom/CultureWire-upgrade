@@ -6,6 +6,7 @@ import { ExecuteRequestSchema, CancelExecutionSchema } from '@/lib/validators';
 import type { PlannedActorRun, ScrapeJob } from '@/lib/types';
 import { ACTOR_REGISTRY } from '@/lib/actor-registry';
 import { getSession } from '@/lib/auth/session';
+import { sanitizeData } from '@/lib/utils';
 
 async function processJob(jobId: string, projectId: string, runId: string, platform: string) {
   const supabase = createAdminClient();
@@ -17,7 +18,7 @@ async function processJob(jobId: string, projectId: string, runId: string, platf
       job_id: jobId,
       project_id: projectId,
       source_platform: platform,
-      raw_data: items,
+      raw_data: sanitizeData(items),
       item_count: items.length,
     });
 

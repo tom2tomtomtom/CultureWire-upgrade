@@ -1,6 +1,7 @@
 import { ACTOR_REGISTRY, type PlannerParams } from '@/lib/actor-registry';
 import { startActorRun, pollRunToCompletion, getDatasetItems, scrapeRedditDirect } from '@/lib/apify';
 import { createAdminClient } from '@/lib/supabase/server';
+import { sanitizeData } from '@/lib/utils';
 
 interface SupplementaryResult {
   scan_type: 'reddit_threads' | 'google_trends' | 'news';
@@ -40,7 +41,7 @@ async function runSupplementaryScanInternal(
     await supabase.from('culture_wire_supplementary').insert({
       search_id: searchId,
       scan_type: 'reddit_threads',
-      raw_data: items,
+      raw_data: sanitizeData(items),
       item_count: items.length,
     });
 
@@ -71,7 +72,7 @@ async function runSupplementaryScanInternal(
     await supabase.from('culture_wire_supplementary').insert({
       search_id: searchId,
       scan_type: 'google_trends',
-      raw_data: items,
+      raw_data: sanitizeData(items),
       item_count: items.length,
     });
 
@@ -94,7 +95,7 @@ async function runSupplementaryScanInternal(
       await supabase.from('culture_wire_supplementary').insert({
         search_id: searchId,
         scan_type: 'news',
-        raw_data: articles,
+        raw_data: sanitizeData(articles),
         item_count: articles.length,
       });
 
