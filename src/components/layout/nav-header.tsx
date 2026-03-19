@@ -63,7 +63,7 @@ export function NavHeader({ email }: { email: string | null }) {
               Categories
             </Link>
             <Link
-              href="/project/new"
+              href="/project"
               className={cn(
                 'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
                 pathname.startsWith('/project')
