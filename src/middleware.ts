@@ -32,7 +32,10 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    const loginUrl = new URL('/login', request.url);
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || '';
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    const baseUrl = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin);
+    const loginUrl = new URL('/login', baseUrl);
     loginUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(loginUrl);
   }
