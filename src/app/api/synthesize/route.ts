@@ -228,70 +228,68 @@ export async function POST(request: NextRequest) {
         jobLayerMap.set(job.id, job.actor_display_name);
       }
 
-      for (const [platform, platformResults] of byPlatform) {
+      // Keep content fields at full length, truncate metadata/nested objects
+      const truncateItem = (item: Record<string, unknown>) => {
+        const truncated: Record<string, unknown> = {};
+        const sanitize = (s: string) => s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
+        for (const [key, value] of Object.entries(item)) {
+          if (key.startsWith('_')) continue;
+          if (typeof value === 'string') {
+            const clean = sanitize(value);
+            const limit = CONTENT_FIELDS.has(key) ? 1500 : 300;
+            truncated[key] = clean.length > limit ? clean.slice(0, limit) + '...' : clean;
+          } else if (typeof value === 'object' && value !== null) {
+            const json = sanitize(JSON.stringify(value));
+            truncated[key] = json.length > 500 ? json.slice(0, 500) + '...' : value;
+          } else {
+            truncated[key] = value;
+          }
+        }
+        return truncated;
+      };
+
+      // Process all platforms in parallel for pass 1
+      const analyzeOnePlatform = async (platform: string, platformResults: ScrapeResult[]) => {
         console.log(`[synthesize] Processing ${platform}...`);
         const rawItems = platformResults.flatMap((r) => r.raw_data);
-        // Normalize field names from various Apify actor schemas
         const allItems = normalizeItems(platform, rawItems);
         const systemPrompt = buildPerSourcePrompt(platform, researchSpec);
 
-        // Score items deterministically before sending to Claude
         let scoredItems = scoreItems(platform, allItems);
-        // Apply relevance boost so research-subject items rank higher
         scoredItems = boostRelevance(scoredItems, allRelevanceKeywords);
         const topItems = toDisplayItems(scoredItems);
         const scoredSummary = buildScoredItemsSummary(platform, scoredItems);
 
-        // Keep content fields at full length, truncate metadata/nested objects
-        const truncateItem = (item: Record<string, unknown>) => {
-          const truncated: Record<string, unknown> = {};
-          // Strip lone surrogates that break JSON serialization
-          const sanitize = (s: string) => s.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '\uFFFD');
-          for (const [key, value] of Object.entries(item)) {
-            // Skip internal scoring fields from the raw data sent to Claude
-            if (key.startsWith('_')) continue;
-            if (typeof value === 'string') {
-              const clean = sanitize(value);
-              const limit = CONTENT_FIELDS.has(key) ? 1500 : 300;
-              truncated[key] = clean.length > limit ? clean.slice(0, limit) + '...' : clean;
-            } else if (typeof value === 'object' && value !== null) {
-              const json = sanitize(JSON.stringify(value));
-              truncated[key] = json.length > 500 ? json.slice(0, 500) + '...' : value;
-            } else {
-              truncated[key] = value;
-            }
-          }
-          return truncated;
-        };
-
-        // Sort by score descending so Claude sees best content first
+        // Sort by score descending, take top 150 (was 300) to reduce token load
         const sortedItems = [...scoredItems].sort((a, b) => b._score - a._score);
         const trimmedItems = sortedItems.map(truncateItem);
-        const capped = trimmedItems.slice(0, 300);
-        const chunks = chunkArray(capped, 75);
-        let analysis = '';
+        const capped = trimmedItems.slice(0, 150);
 
         const dataSummary = buildDataSummary(platform, allItems);
+        const chunks = chunkArray(capped, 75);
+        let analysis = '';
 
         if (chunks.length === 1) {
           analysis = await callAnthropicWithFallback(
             systemPrompt,
             `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nHere are ${capped.length} results from ${platform} (${allItems.length} total collected), sorted by engagement score:\n\n${JSON.stringify(capped, null, 2)}`,
-            8192
+            4096
           );
         } else {
-          const chunkSummaries: string[] = [];
-          for (const chunk of chunks) {
-            const summary = await callAnthropicWithFallback(
-              systemPrompt,
-              `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nSummarize the key findings from this batch of ${chunk.length} results:\n\n${JSON.stringify(chunk, null, 2)}`
-            );
-            chunkSummaries.push(summary);
-          }
+          // Run chunk summaries in parallel too
+          const chunkSummaries = await Promise.all(
+            chunks.map((chunk) =>
+              callAnthropicWithFallback(
+                systemPrompt,
+                `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nSummarize the key findings from this batch of ${chunk.length} results:\n\n${JSON.stringify(chunk, null, 2)}`,
+                4096
+              )
+            )
+          );
           analysis = await callAnthropicWithFallback(
             systemPrompt,
             `DATA SUMMARY:\n${dataSummary}\n\n${scoredSummary}\n\n---\n\nConsolidate these ${chunkSummaries.length} batch summaries into a single analysis:\n\n${chunkSummaries.join('\n\n---\n\n')}`,
-            8192
+            4096
           );
         }
 
@@ -307,7 +305,20 @@ export async function POST(request: NextRequest) {
         });
 
         console.log(`[synthesize] ${platform} done.`);
-        perSourceAnalyses.push({ platform, analysis });
+        return { platform, analysis };
+      };
+
+      // Run all per-source analyses in parallel
+      const platformEntries = Array.from(byPlatform.entries());
+      const settled = await Promise.allSettled(
+        platformEntries.map(([platform, platformResults]) =>
+          analyzeOnePlatform(platform, platformResults)
+        )
+      );
+      for (const result of settled) {
+        if (result.status === 'fulfilled') {
+          perSourceAnalyses.push(result.value);
+        }
       }
 
       // ===== PASS 2: Cross-source synthesis =====
@@ -319,7 +330,7 @@ export async function POST(request: NextRequest) {
       const crossSourceAnalysis = await callAnthropicWithFallback(
         buildCrossSourcePrompt(researchSpec),
         crossSourceInput,
-        8192
+        4096
       );
 
       await bgSupabase.from('analysis_results').insert({
@@ -344,7 +355,7 @@ export async function POST(request: NextRequest) {
       const strategicNarrative = await callAnthropicWithFallback(
         buildStrategicNarrativePrompt(researchSpec),
         strategicInput,
-        8192
+        4096
       );
 
       await bgSupabase.from('analysis_results').insert({
@@ -362,7 +373,7 @@ export async function POST(request: NextRequest) {
       const creativeRoutes = await callAnthropicWithFallback(
         buildCreativeRoutesPrompt(researchSpec, brandContext),
         routesInput,
-        8192
+        4096
       );
 
       await bgSupabase.from('analysis_results').insert({

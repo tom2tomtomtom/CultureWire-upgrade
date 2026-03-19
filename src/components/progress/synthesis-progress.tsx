@@ -90,11 +90,23 @@ export function SynthesisProgress({ projectId }: SynthesisProgressProps) {
   const startTimeRef = useRef<number | null>(null);
 
   const deriveExpectedPlatforms = useCallback((jobs: ScrapeJob[]) => {
+    // Map display names to the source_platform values used in scrape_results/analysis_results
+    const displayToSource: Record<string, string> = {
+      reddit_scraper: 'reddit',
+      youtube_search: 'youtube',
+      instagram: 'instagram',
+      trustpilot_reviews: 'trustpilot',
+      google_trends: 'google_trends',
+      tiktok: 'tiktok',
+    };
     const platforms = [
       ...new Set(
         jobs
           .filter((j) => j.status === 'succeeded')
-          .map((j) => j.actor_display_name.toLowerCase().replace(/\s+/g, '_'))
+          .map((j) => {
+            const key = j.actor_display_name.toLowerCase().replace(/\s+/g, '_');
+            return displayToSource[key] || key;
+          })
       ),
     ];
     return platforms;
