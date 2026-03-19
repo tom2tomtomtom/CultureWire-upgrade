@@ -47,7 +47,11 @@ export function useChat(projectId: string) {
         signal: abortRef.current.signal,
       });
 
-      if (!response.ok) throw new Error(`Chat failed: ${response.status}`);
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error('[chat] API error:', response.status, errBody);
+        throw new Error(`Chat failed: ${response.status} - ${errBody}`);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No response body');
@@ -95,6 +99,7 @@ export function useChat(projectId: string) {
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
+      console.error('[chat] Send error:', error);
       if ((error as Error).name !== 'AbortError') {
         const errorMessage: ChatMessage = {
           id: crypto.randomUUID(),

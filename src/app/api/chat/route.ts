@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('[chat] POST /api/chat hit');
   const session = await getSession();
+  console.log('[chat] Session:', session ? session.email : 'null');
   if (!session) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -67,9 +69,11 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (!projectCheck) {
+    console.log('[chat] Project not found for user:', session.sub, 'projectId:', projectId);
     return Response.json({ error: 'Project not found' }, { status: 404 });
   }
 
+  console.log('[chat] Project verified, calling Anthropic...');
   const anthropic = getAnthropicClient();
 
   // Save user message
