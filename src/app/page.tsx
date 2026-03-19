@@ -1,9 +1,5 @@
-import { ProjectList } from '@/components/project/project-list';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return (
-    <div className="mx-auto max-w-5xl px-4 py-6">
-      <ProjectList />
-    </div>
-  );
+  redirect('/culture-wire');
 }
