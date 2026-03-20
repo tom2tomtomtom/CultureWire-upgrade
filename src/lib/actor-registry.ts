@@ -266,8 +266,8 @@ const TwitterInputSchema = z.object({
 });
 
 const FacebookInputSchema = z.object({
-  startUrls: z.array(z.object({ url: z.string() })).min(1),
-  resultsLimit: z.number().min(1).max(200).default(50),
+  query: z.string().min(1),
+  maxResults: z.number().min(10).max(200).default(50),
 });
 
 const NewsInputSchema = z.object({
@@ -298,19 +298,17 @@ ACTOR_REGISTRY.twitter = {
 // Rent at https://console.apify.com/actors/kfiWbq3boy3dWKbiL then add back
 
 ACTOR_REGISTRY.facebook = {
-  id: 'apify/facebook-posts-scraper',
+  id: 'powerai/facebook-post-search-scraper',
   platform: 'facebook' as Platform,
   displayName: 'Facebook',
   description: 'Search Facebook posts. Best for community insights and older demographics.',
   useCases: ['Community group insights', 'Brand page engagement', 'Older demographic sentiment', 'Local community trends'],
   inputSchema: FacebookInputSchema,
   buildInput: (params) => ({
-    startUrls: params.keywords.slice(0, 3).map((kw) => ({
-      url: `https://www.facebook.com/search/posts/?q=${encodeURIComponent(kw)}`,
-    })),
-    resultsLimit: Math.min(params.maxResults, 100),
+    query: params.keywords.slice(0, 3).join(' '),
+    maxResults: Math.min(params.maxResults, 100),
   }),
-  extractFields: ['text', 'authorName', 'likes', 'comments', 'shares', 'timestamp', 'url'],
+  extractFields: ['message', 'author', 'author_title', 'reactions_count', 'comments_count', 'reshare_count', 'timestamp', 'url', 'type'],
   costProfile: { model: 'pay_per_result', estimatedCostPer100: 15 },
   defaults: { maxResults: 50, timeout: 180 },
 };

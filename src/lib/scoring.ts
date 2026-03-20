@@ -295,12 +295,13 @@ function scoreLinkedIn(items: Record<string, unknown>[]): ScoredItem[] {
 }
 
 function scoreFacebook(items: Record<string, unknown>[]): ScoredItem[] {
-  const likes = items.map((i) => num(i.likes || i.likeCount || 0));
+  // Handle both old actor (likes/comments/shares) and new powerai actor (reactions_count/comments_count/reshare_count)
+  const likes = items.map((i) => num(i.reactions_count || i.likes || i.likeCount || 0));
 
   return items.map((item, idx) => {
     const likeCount = likes[idx];
-    const commentCount = num(item.comments || item.commentCount || 0);
-    const shareCount = num(item.shares || item.shareCount || 0);
+    const commentCount = num(item.comments_count || item.comments || item.commentCount || 0);
+    const shareCount = num(item.reshare_count || item.shares || item.shareCount || 0);
 
     const likeP = percentile(likeCount, likes);
     const commentBonus = clamp(commentCount * 1.5, 0, 20);
@@ -314,10 +315,10 @@ function scoreFacebook(items: Record<string, unknown>[]): ScoredItem[] {
       _tier: tierLabel(engScore),
       _url: String(item.url || '') || null,
       _thumbnail: null,
-      _creator: String(item.authorName || item.pageName || '') || null,
-      _title: String(item.text || item.message || '').slice(0, 120) || null,
+      _creator: String(item.author_title || (typeof item.author === 'object' && item.author !== null ? (item.author as any).name || (item.author as any).title || '' : item.author) || item.authorName || item.pageName || '') || null,
+      _title: String(item.message || item.text || '').slice(0, 120) || null,
       _engagement_rate: null,
-      _platform_metric: `${formatNum(likeCount)} likes · ${formatNum(shareCount)} shares`,
+      _platform_metric: `${formatNum(likeCount)} reactions · ${formatNum(shareCount)} shares`,
     };
   });
 }
