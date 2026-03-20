@@ -4,7 +4,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2, AlertTriangle, X } from 'lucide-react';
 import type { CultureWireSearch } from '@/lib/types';
 
-const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram', 'twitter', 'linkedin', 'facebook', 'news'] as const;
+const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram', 'twitter', 'news'] as const;
+// LinkedIn requires paid Apify rental; Facebook search scraping is blocked
 const GEOS = [
   { code: 'AU', label: 'Australia' },
   { code: 'US', label: 'United States' },

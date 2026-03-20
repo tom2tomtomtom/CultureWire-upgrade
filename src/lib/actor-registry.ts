@@ -278,7 +278,7 @@ const NewsInputSchema = z.object({
 
 // Extended platforms (Phase 3)
 ACTOR_REGISTRY.twitter = {
-  id: 'quacker/twitter-scraper',
+  id: 'apidojo/tweet-scraper',
   platform: 'twitter' as Platform,
   displayName: 'Twitter/X',
   description: 'Search Twitter/X posts. Best for real-time conversation and trending topics.',
@@ -286,10 +286,10 @@ ACTOR_REGISTRY.twitter = {
   inputSchema: TwitterInputSchema,
   buildInput: (params) => ({
     searchTerms: params.keywords.slice(0, 5),
-    maxTweets: Math.min(params.maxResults, 200),
-    sort: 'Top',
+    maxItems: Math.min(params.maxResults, 200),
+    sort: 'Latest',
   }),
-  extractFields: ['text', 'createdAt', 'user', 'replyCount', 'retweetCount', 'likeCount', 'viewCount', 'url'],
+  extractFields: ['text', 'fullText', 'createdAt', 'author', 'replyCount', 'retweetCount', 'likeCount', 'viewCount', 'url', 'twitterUrl'],
   costProfile: { model: 'pay_per_result', estimatedCostPer100: 15 },
   defaults: { maxResults: 100, timeout: 180 },
 };

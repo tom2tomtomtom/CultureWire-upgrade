@@ -48,12 +48,29 @@ export async function getInfluencersFromSheet(): Promise<SheetInfluencer[]> {
 
     if (!name || !handle) continue;
 
+    // If profileUrl is not a URL (e.g., hyperlink display text), generate from handle + platform
+    let resolvedUrl = profileUrl;
+    if (resolvedUrl && !resolvedUrl.startsWith('http')) {
+      const platformLower = (platform || 'instagram').toLowerCase();
+      if (platformLower === 'instagram' || platformLower === 'unknown') {
+        resolvedUrl = `https://www.instagram.com/${handle}/`;
+      } else if (platformLower === 'tiktok') {
+        resolvedUrl = `https://www.tiktok.com/@${handle}`;
+      } else if (platformLower === 'youtube') {
+        resolvedUrl = `https://www.youtube.com/@${handle}`;
+      } else if (platformLower === 'twitter') {
+        resolvedUrl = `https://x.com/${handle}`;
+      } else {
+        resolvedUrl = '';
+      }
+    }
+
     influencers.push({
       name,
       handle,
       platform,
       category,
-      profileUrl,
+      profileUrl: resolvedUrl,
       addedBy,
       dateAdded,
       status,
