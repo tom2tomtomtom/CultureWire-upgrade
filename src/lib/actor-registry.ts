@@ -185,13 +185,19 @@ export const ACTOR_REGISTRY: Record<string, ActorRegistryEntry> = {
       'Short-form content landscape',
     ],
     inputSchema: TikTokInputSchema,
-    buildInput: (params) => ({
-      searchQueries: params.keywords.length > 0 ? params.keywords : undefined,
-      hashtags: params.hashtags.length > 0 ? params.hashtags : undefined,
-      resultsPerPage: Math.min(params.maxResults, 200),
-      searchSection: '/video',
-      proxyCountryCode: params.geo === 'US' ? 'US' : 'None',
-    }),
+    buildInput: (params) => {
+      // Sanitize hashtags for TikTok — must be clean alphanumeric, no spaces
+      const cleanHashtags = (params.hashtags || [])
+        .map((h) => h.replace(/[^a-zA-Z0-9]/g, '').toLowerCase())
+        .filter((h) => h.length > 0);
+      return {
+        searchQueries: params.keywords.length > 0 ? params.keywords : undefined,
+        hashtags: cleanHashtags.length > 0 ? cleanHashtags : undefined,
+        resultsPerPage: Math.min(params.maxResults, 200),
+        searchSection: '/video',
+        proxyCountryCode: params.geo === 'US' ? 'US' : 'None',
+      };
+    },
     extractFields: ['text', 'createTime', 'authorMeta', 'diggCount', 'shareCount', 'playCount', 'commentCount', 'hashtags', 'webVideoUrl'],
     costProfile: { model: 'pay_per_result', estimatedCostPer100: 20 },
     defaults: { maxResults: 100, timeout: 300 },

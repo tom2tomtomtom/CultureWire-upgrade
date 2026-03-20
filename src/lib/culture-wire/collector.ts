@@ -5,6 +5,48 @@ import { sanitizeData } from '@/lib/utils';
 import type { BrandContext, CultureWireLayer, Platform } from '@/lib/types';
 import type { CategoryConfig } from './categories';
 
+/**
+ * Generate platform-appropriate hashtags from category keywords.
+ * - Strips spaces/special chars for Instagram/TikTok
+ * - Adds the category name as a hashtag
+ * - Produces short, searchable tags (max 3-4 words mashed together)
+ */
+function buildCategoryHashtags(category: CategoryConfig): string[] {
+  const tags = new Set<string>();
+
+  // Category name as a hashtag (e.g., "Food & Beverage" → "foodandbeverage")
+  const catTag = category.name.replace(/&/g, 'and').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  if (catTag.length > 0) tags.add(catTag);
+
+  // Extract meaningful 1-2 word hashtags from keywords
+  for (const kw of category.keywords) {
+    const words = kw.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+    // Take first 2 meaningful words for a hashtag
+    if (words.length >= 2) {
+      tags.add(words.slice(0, 2).join(''));
+    }
+    // Also add individual meaningful words
+    for (const w of words.slice(0, 2)) {
+      if (w.length >= 4) tags.add(w);
+    }
+  }
+
+  // Add well-known platform hashtags based on group
+  const groupTags: Record<string, string[]> = {
+    'Consumer & Lifestyle': ['trending', 'viral', 'australia'],
+    'Travel & Transport': ['travel', 'adventure', 'explore'],
+    'Technology & Digital': ['tech', 'digital', 'innovation'],
+    'Health & Wellbeing': ['wellness', 'health', 'selfcare'],
+    'Purpose & Sustainability': ['sustainable', 'ecofriendly', 'green'],
+    'Sports & Entertainment': ['sports', 'entertainment', 'aussie'],
+    'Business & Government': ['business', 'finance', 'money'],
+    'Social & Reactive': ['trending', 'viral', 'fyp'],
+  };
+  for (const gt of groupTags[category.group] || []) tags.add(gt);
+
+  return [...tags].slice(0, 10);
+}
+
 interface CollectionResult {
   platform: string;
   layer: CultureWireLayer;
@@ -214,6 +256,10 @@ export async function runCategoryCollection(
     trending: category.keywords.slice(third * 2),
   };
 
+  // Build platform-appropriate hashtags from category data
+  const categoryHashtags = buildCategoryHashtags(category);
+  console.log(`[category] Hashtags for ${category.name}:`, categoryHashtags);
+
   const tasks: { platform: Platform; layer: CultureWireLayer; params: PlannerParams }[] = [];
   const layers: CultureWireLayer[] = ['brand', 'category', 'trending'];
 
@@ -225,6 +271,11 @@ export async function runCategoryCollection(
       const keywords = keywordSets[layer];
       if (keywords.length === 0) continue;
 
+      // Use category-derived hashtags instead of raw keywords for hashtag-based platforms
+      const layerIdx = layers.indexOf(layer);
+      const hashtagSlice = categoryHashtags.slice(layerIdx * 3, (layerIdx + 1) * 3);
+      const hashtags = hashtagSlice.length > 0 ? hashtagSlice : categoryHashtags.slice(0, 3);
+
       tasks.push({
         platform,
         layer,
@@ -232,7 +283,7 @@ export async function runCategoryCollection(
           keywords,
           brands: [],
           subreddits: [],
-          hashtags: keywords.slice(0, 3),
+          hashtags,
           urls: [],
           geo,
           timeRange: 'month',

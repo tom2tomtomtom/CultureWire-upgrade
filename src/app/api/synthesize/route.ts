@@ -315,9 +315,22 @@ export async function POST(request: NextRequest) {
           analyzeOnePlatform(platform, platformResults)
         )
       );
-      for (const result of settled) {
+      for (let i = 0; i < settled.length; i++) {
+        const result = settled[i];
         if (result.status === 'fulfilled') {
           perSourceAnalyses.push(result.value);
+        } else {
+          const failedPlatform = platformEntries[i][0];
+          const itemCount = platformEntries[i][1].flatMap((r) => r.raw_data).length;
+          console.error(`[synthesize] FAILED per_source for ${failedPlatform} (${itemCount} items):`, result.reason);
+          // Save a failure record so it's visible in the UI
+          await bgSupabase.from('analysis_results').insert({
+            project_id: projectId,
+            pass_type: 'per_source',
+            source_platform: failedPlatform,
+            analysis_content: `Analysis failed: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`,
+            metadata: { failed: true, item_count: itemCount, error: String(result.reason) },
+          });
         }
       }
 
