@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import type { CultureWireSearch } from '@/lib/types';
 
-const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram'] as const;
+const PLATFORMS = ['reddit', 'tiktok', 'youtube', 'instagram', 'twitter', 'facebook', 'google_trends', 'news'] as const;
 
 export default function CategoryResultsPage() {
   const { slug } = useParams<{ slug: string }>();
