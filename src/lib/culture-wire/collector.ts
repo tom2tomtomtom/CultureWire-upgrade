@@ -7,44 +7,45 @@ import type { CategoryConfig } from './categories';
 
 /**
  * Generate platform-appropriate hashtags from category keywords.
- * - Strips spaces/special chars for Instagram/TikTok
- * - Adds the category name as a hashtag
- * - Produces short, searchable tags (max 3-4 words mashed together)
+ * Produces clean single-word or compound tags that work on Instagram/TikTok.
  */
 function buildCategoryHashtags(category: CategoryConfig): string[] {
   const tags = new Set<string>();
 
-  // Category name as a hashtag (e.g., "Food & Beverage" → "foodandbeverage")
-  const catTag = category.name.replace(/&/g, 'and').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-  if (catTag.length > 0) tags.add(catTag);
+  // Common filler words to skip
+  const STOP_WORDS = new Set(['the', 'and', 'for', 'with', 'from', 'this', 'that', 'what', 'how', 'day', 'new', 'you', 'your', 'its', 'get', 'try', 'easy', 'best', 'top', 'real', 'honest']);
 
-  // Extract meaningful 1-2 word hashtags from keywords
+  // Category name as a hashtag (e.g., "Food & Beverage" → "foodbeverage")
+  const catWords = category.name.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  if (catWords.length > 0) tags.add(catWords.join(''));
+
+  // Extract meaningful hashtags from keywords
   for (const kw of category.keywords) {
-    const words = kw.toLowerCase().split(/\s+/).filter((w) => w.length > 2);
-    // Take first 2 meaningful words for a hashtag
+    const words = kw.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+    // Full compound (up to 3 words) — these are often real hashtags
     if (words.length >= 2) {
-      tags.add(words.slice(0, 2).join(''));
+      tags.add(words.slice(0, 3).join(''));
     }
-    // Also add individual meaningful words
-    for (const w of words.slice(0, 2)) {
-      if (w.length >= 4) tags.add(w);
+    // Individual meaningful words (4+ chars, not stop words)
+    for (const w of words) {
+      if (w.length >= 5) tags.add(w);
     }
   }
 
   // Add well-known platform hashtags based on group
   const groupTags: Record<string, string[]> = {
-    'Consumer & Lifestyle': ['trending', 'viral', 'australia'],
-    'Travel & Transport': ['travel', 'adventure', 'explore'],
-    'Technology & Digital': ['tech', 'digital', 'innovation'],
-    'Health & Wellbeing': ['wellness', 'health', 'selfcare'],
-    'Purpose & Sustainability': ['sustainable', 'ecofriendly', 'green'],
-    'Sports & Entertainment': ['sports', 'entertainment', 'aussie'],
-    'Business & Government': ['business', 'finance', 'money'],
-    'Social & Reactive': ['trending', 'viral', 'fyp'],
+    'Consumer & Lifestyle': ['trending', 'viral', 'australia', 'fyp'],
+    'Travel & Transport': ['travel', 'adventure', 'explore', 'wanderlust'],
+    'Technology & Digital': ['tech', 'digital', 'innovation', 'gadgets'],
+    'Health & Wellbeing': ['wellness', 'health', 'selfcare', 'motivation'],
+    'Purpose & Sustainability': ['sustainable', 'ecofriendly', 'green', 'zerowaste'],
+    'Sports & Entertainment': ['sports', 'entertainment', 'aussie', 'highlights'],
+    'Business & Government': ['business', 'finance', 'money', 'investing'],
+    'Social & Reactive': ['trending', 'viral', 'fyp', 'memes'],
   };
   for (const gt of groupTags[category.group] || []) tags.add(gt);
 
-  return [...tags].slice(0, 10);
+  return [...tags].slice(0, 12);
 }
 
 interface CollectionResult {
