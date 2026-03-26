@@ -558,7 +558,18 @@ export function boostRelevance(
     // Count how many distinct keywords match
     const matchCount = lowerKeywords.filter((kw) => textBlob.includes(kw)).length;
 
-    if (matchCount === 0) return item;
+    if (matchCount === 0) {
+      // Penalize high-engagement but irrelevant posts (e.g. viral Reddit posts
+      // that slip through keyword search but aren't about the research topic)
+      const penalty = Math.round(item._score * 0.4);
+      const penalizedScore = clamp(item._score - penalty, 0, 100);
+      return {
+        ...item,
+        _score: penalizedScore,
+        _tier: tierLabel(penalizedScore),
+        _relevance_boost: -penalty,
+      };
+    }
 
     // Boost: +15 for first keyword match, +5 for each additional
     const boost = 15 + Math.min(matchCount - 1, 3) * 5;

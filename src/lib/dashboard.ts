@@ -675,7 +675,7 @@ ${perSource.map((analysis) => {
   </div>`;
   }).join('')}
 
-  ${buildTopPostsHtml((analysis.metadata?.top_items || []) as TopItemDisplay[], platform)}
+  ${platform === 'google_trends' ? '' : buildTopPostsHtml((analysis.metadata?.top_items || []) as TopItemDisplay[], platform)}
 </div>`;
 }).join('')}
 
