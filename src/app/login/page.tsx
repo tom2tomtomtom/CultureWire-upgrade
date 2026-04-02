@@ -47,10 +47,9 @@ function LoginForm() {
         </div>
         <p className="text-center text-gray-500 text-sm mb-8">Brand Intelligence Platform</p>
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-6">
-          <p className="text-sm font-semibold text-amber-800">Approved Access Required</p>
-          <p className="text-sm text-gray-600 mt-1">
-            This platform requires administrator approval. If you don&apos;t have an account yet, please{' '}
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6">
+          <p className="text-sm text-gray-600">
+            Enter your <strong>@altshift.com.au</strong> email to sign in. External users can{' '}
             <a href="/subscribe" className="text-[#8B3F4F] hover:underline">request access here</a>.
           </p>
         </div>

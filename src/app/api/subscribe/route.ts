@@ -11,11 +11,15 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
+    const normalizedEmail = email.toLowerCase().trim();
+    const autoApprove = normalizedEmail.endsWith('@altshift.com.au');
+
     // Store application (upsert by email to avoid duplicates)
+    // Auto-approve altshift.com.au emails
     await (supabase as any)
       .from('subscription_applications')
       .upsert(
-        { email: email.toLowerCase().trim(), company: company.trim(), status: 'pending' },
+        { email: normalizedEmail, company: company.trim(), status: autoApprove ? 'approved' : 'pending' },
         { onConflict: 'email' }
       );
 
