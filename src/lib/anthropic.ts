@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { sanitizeString } from '@/lib/utils';
 
 let client: Anthropic | null = null;
 
@@ -35,11 +36,12 @@ export async function callAnthropicWithFallback(
 ): Promise<string> {
   const anthropic = getAnthropicClient();
 
-  // Safety truncation to prevent token limit errors
+  // Strip lone surrogates that break JSON serialization, then truncate
+  const cleanContent = sanitizeString(userContent);
   const truncatedContent =
-    userContent.length > MAX_INPUT_CHARS
-      ? userContent.slice(0, MAX_INPUT_CHARS) + '\n\n[TRUNCATED - data exceeded size limit]'
-      : userContent;
+    cleanContent.length > MAX_INPUT_CHARS
+      ? cleanContent.slice(0, MAX_INPUT_CHARS) + '\n\n[TRUNCATED - data exceeded size limit]'
+      : cleanContent;
 
   for (let i = 0; i < MODEL_FALLBACK_ORDER.length; i++) {
     const model = MODEL_FALLBACK_ORDER[i];

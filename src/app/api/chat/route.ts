@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { ChatRequestSchema } from '@/lib/validators';
 import { buildPlannerSystemPrompt } from '@/lib/prompts/planner';
 import { getSession } from '@/lib/auth/session';
+import { sanitizeString } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     .eq('id', projectId)
     .single();
 
-  const briefContext = project?.brief_parsed || project?.brief_text || '';
+  const briefContext = sanitizeString(project?.brief_parsed || project?.brief_text || '');
 
   // Build messages for Claude
   const systemPrompt = buildPlannerSystemPrompt() +
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 
   const messages_for_claude = (history || []).map((m) => ({
     role: m.role as 'user' | 'assistant',
-    content: m.content,
+    content: sanitizeString(m.content),
   }));
 
   // Stream response
