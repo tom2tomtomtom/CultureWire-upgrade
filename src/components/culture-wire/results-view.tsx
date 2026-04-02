@@ -205,8 +205,19 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
 
         <TabsContent value="brief" className="mt-4">
           {strategicBrief ? (
-            <div className="border border-gray-200 bg-white p-6 rounded-xl shadow-sm prose prose-sm max-w-none prose-headings:uppercase prose-headings:tracking-widest prose-headings:text-gray-900 prose-p:text-gray-500 prose-strong:text-gray-900 prose-li:text-gray-500">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{strategicBrief}</ReactMarkdown>
+            <div className="space-y-6">
+              <div className="border border-gray-200 bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="prose prose-sm max-w-none p-6 md:p-8
+                  prose-h2:text-xs prose-h2:font-bold prose-h2:uppercase prose-h2:tracking-[0.2em] prose-h2:text-[#8B3F4F] prose-h2:border-b prose-h2:border-gray-100 prose-h2:pb-2 prose-h2:mb-4 prose-h2:mt-8 first:prose-h2:mt-0
+                  prose-h3:text-sm prose-h3:font-semibold prose-h3:text-gray-900 prose-h3:mt-4 prose-h3:mb-2
+                  prose-p:text-gray-600 prose-p:leading-relaxed prose-p:mb-3
+                  prose-strong:text-gray-900 prose-strong:font-semibold
+                  prose-li:text-gray-600 prose-li:leading-relaxed
+                  prose-ul:space-y-2 prose-ol:space-y-2
+                  [&>h2:first-child]:mt-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{strategicBrief}</ReactMarkdown>
+                </div>
+              </div>
             </div>
           ) : (
             <p className="text-gray-500">Strategic brief not yet generated.</p>
