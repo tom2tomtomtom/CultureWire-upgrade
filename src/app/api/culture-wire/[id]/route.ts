@@ -38,6 +38,7 @@ export async function GET(
   const search = searchResult.data;
 
   // Auto-recover stale searches stuck in collecting/analyzing
+  // But don't auto-recover if we have results but no analyses (analysis may still be running)
   if (search.status === 'collecting' || search.status === 'analyzing') {
     const lastUpdate = search.result_summary?.last_update;
     const batchStale = lastUpdate && Date.now() - new Date(lastUpdate).getTime() > STALE_BATCH_THRESHOLD_MS;
@@ -46,27 +47,36 @@ export async function GET(
     if (batchStale || createdStale) {
       const results = resultsResult.data || [];
       const analyses = analysesResult.data || [];
-      const hasData = results.length > 0 || analyses.length > 0;
-      const recoveryReason = batchStale
-        ? `Pipeline stalled (no batch update for >5min, last: ${lastUpdate})`
-        : 'Stale search detected (>20min since creation)';
+      const hasResults = results.length > 0;
+      const hasAnalyses = analyses.length > 0;
 
-      const admin = createAdminClient();
-      await admin
-        .from('culture_wire_searches')
-        .update({
-          status: hasData ? 'complete' : 'failed',
-          completed_at: new Date().toISOString(),
-          result_summary: {
-            ...(search.result_summary || {}),
-            auto_recovered: true,
-            recovery_reason: recoveryReason,
-            total_items: results.reduce((sum: number, r: { item_count: number }) => sum + r.item_count, 0),
-          },
-        })
-        .eq('id', id);
+      // If we have results but no analyses and status is 'analyzing', let the analysis pipeline finish
+      // Only auto-recover analyzing if analyses exist (partial completion) or no data at all
+      if (search.status === 'analyzing' && hasResults && !hasAnalyses) {
+        // Don't auto-recover - analysis pipeline is likely still running
+      } else {
+        const hasData = hasResults || hasAnalyses;
+        const recoveryReason = batchStale
+          ? `Pipeline stalled (no batch update for >5min, last: ${lastUpdate})`
+          : 'Stale search detected (>20min since creation)';
 
-      search.status = hasData ? 'complete' : 'failed';
+        const admin = createAdminClient();
+        await admin
+          .from('culture_wire_searches')
+          .update({
+            status: hasData ? 'complete' : 'failed',
+            completed_at: new Date().toISOString(),
+            result_summary: {
+              ...(search.result_summary || {}),
+              auto_recovered: true,
+              recovery_reason: recoveryReason,
+              total_items: results.reduce((sum: number, r: { item_count: number }) => sum + r.item_count, 0),
+            },
+          })
+          .eq('id', id);
+
+        search.status = hasData ? 'complete' : 'failed';
+      }
     }
   }
 
