@@ -205,20 +205,7 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
 
         <TabsContent value="brief" className="mt-4">
           {strategicBrief ? (
-            <div className="space-y-6">
-              <div className="border border-gray-200 bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="prose prose-sm max-w-none p-6 md:p-8
-                  prose-h2:text-xs prose-h2:font-bold prose-h2:uppercase prose-h2:tracking-[0.2em] prose-h2:text-[#8B3F4F] prose-h2:border-b prose-h2:border-gray-100 prose-h2:pb-2 prose-h2:mb-4 prose-h2:mt-8 first:prose-h2:mt-0
-                  prose-h3:text-sm prose-h3:font-semibold prose-h3:text-gray-900 prose-h3:mt-4 prose-h3:mb-2
-                  prose-p:text-gray-600 prose-p:leading-relaxed prose-p:mb-3
-                  prose-strong:text-gray-900 prose-strong:font-semibold
-                  prose-li:text-gray-600 prose-li:leading-relaxed
-                  prose-ul:space-y-2 prose-ol:space-y-2
-                  [&>h2:first-child]:mt-0">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{strategicBrief}</ReactMarkdown>
-                </div>
-              </div>
-            </div>
+            <StrategicBriefView content={strategicBrief} />
           ) : (
             <p className="text-gray-500">Strategic brief not yet generated.</p>
           )}
@@ -239,6 +226,80 @@ export function ResultsView({ search, results, analyses }: ResultsViewProps) {
 }
 
 // --- Sub-components ---
+
+const BRIEF_SECTION_ICONS: Record<string, string> = {
+  'executive summary': '📋',
+  'cultural landscape': '🌍',
+  'top opportunities': '🎯',
+  'risk radar': '⚠️',
+  'competitive intelligence': '🔍',
+  'recommended actions': '🚀',
+};
+
+function StrategicBriefView({ content }: { content: string }) {
+  // Split brief into sections by ## headings
+  const sections = useMemo(() => {
+    const parts: { title: string; body: string }[] = [];
+    const lines = content.split('\n');
+    let currentTitle = '';
+    let currentBody: string[] = [];
+
+    for (const line of lines) {
+      const headingMatch = line.match(/^#{1,2}\s+(.+)/);
+      if (headingMatch) {
+        if (currentTitle || currentBody.length > 0) {
+          parts.push({ title: currentTitle, body: currentBody.join('\n').trim() });
+        }
+        currentTitle = headingMatch[1].trim();
+        currentBody = [];
+      } else {
+        currentBody.push(line);
+      }
+    }
+    if (currentTitle || currentBody.length > 0) {
+      parts.push({ title: currentTitle, body: currentBody.join('\n').trim() });
+    }
+    return parts.filter(s => s.body.length > 0);
+  }, [content]);
+
+  if (sections.length <= 1) {
+    // Fallback: render as single card if no sections detected
+    return (
+      <div className="border border-gray-200 bg-white p-6 rounded-xl shadow-sm prose prose-sm max-w-none prose-p:text-gray-600 prose-strong:text-gray-900">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {sections.map((section, i) => {
+        const titleLower = section.title.toLowerCase();
+        const icon = Object.entries(BRIEF_SECTION_ICONS).find(([k]) => titleLower.includes(k))?.[1];
+        const isExecutive = titleLower.includes('executive summary');
+
+        return (
+          <div
+            key={i}
+            className={`border bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow ${
+              isExecutive ? 'border-[#8B3F4F]/30 bg-[#8B3F4F]/[0.02]' : 'border-gray-200'
+            }`}
+          >
+            <div className={`px-5 py-3 border-b ${isExecutive ? 'border-[#8B3F4F]/20' : 'border-gray-100'}`}>
+              <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#8B3F4F] flex items-center gap-2">
+                {icon && <span>{icon}</span>}
+                {section.title}
+              </h3>
+            </div>
+            <div className="p-5 prose prose-sm max-w-none prose-p:text-gray-600 prose-p:leading-relaxed prose-p:mb-2 prose-strong:text-gray-900 prose-strong:font-semibold prose-li:text-gray-600 prose-li:leading-relaxed prose-ul:space-y-1.5 prose-ol:space-y-1.5 prose-h3:text-sm prose-h3:font-semibold prose-h3:text-gray-900 prose-h3:mt-3 prose-h3:mb-1">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{section.body}</ReactMarkdown>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function TensionCard({ tension, samplePosts }: { tension: CulturalTension; samplePosts?: SamplePost[] }) {
   const [showPosts, setShowPosts] = useState(false);
