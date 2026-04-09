@@ -3,7 +3,7 @@ import { getSession } from '@/lib/auth/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { SimilarRequestSchema } from '@/lib/creator-intel/validators';
 import { findSimilar } from '@/lib/creator-intel/analyzer';
-import type { PostAnalysisResult, TopicAnalysisResult } from '@/lib/creator-intel/types';
+import type { PostAnalysisResult, CreatorAnalysisResult, TopicAnalysisResult } from '@/lib/creator-intel/types';
 
 export async function POST(
   request: NextRequest,
@@ -36,7 +36,7 @@ export async function POST(
     return NextResponse.json({ error: 'Analysis not yet complete' }, { status: 400 });
   }
 
-  const results = analysis.results as PostAnalysisResult | TopicAnalysisResult;
+  const results = analysis.results as PostAnalysisResult | CreatorAnalysisResult | TopicAnalysisResult;
   const region = results.kind === 'topic' ? results.region : 'AU';
 
   const similar = await findSimilar(results, parsed.data.depth, region);

@@ -27,19 +27,22 @@ export default function CreatorIntelPage() {
       .finally(() => setHistoryLoading(false));
   }, []);
 
-  // Handle ?analyze= (URL) or ?topic= (creator search) query params
+  // Handle ?analyze= (URL), ?creator= (creator profile), or ?topic= query params
   useEffect(() => {
     const analyzeUrl = searchParams.get('analyze');
+    const creatorParam = searchParams.get('creator');
     const topicParam = searchParams.get('topic');
     if (analyzeUrl && !loading) {
       handleAnalyze('url', analyzeUrl);
+    } else if (creatorParam && !loading) {
+      handleAnalyze('creator', creatorParam);
     } else if (topicParam && !loading) {
       handleAnalyze('topic', topicParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleAnalyze(type: 'url' | 'topic', input: string, region: string = 'AU') {
+  async function handleAnalyze(type: 'url' | 'topic' | 'creator', input: string, region: string = 'AU') {
     setLoading(true);
     try {
       const res = await fetch('/api/creator-intel/analyze', {

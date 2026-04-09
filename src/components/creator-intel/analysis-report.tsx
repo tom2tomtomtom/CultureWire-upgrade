@@ -1,7 +1,7 @@
 'use client';
 
 import { ExternalLink, Hash, Globe } from 'lucide-react';
-import type { PostAnalysisResult, TopicAnalysisResult, CreatorIntelAnalysis } from '@/lib/creator-intel/types';
+import type { PostAnalysisResult, CreatorAnalysisResult, TopicAnalysisResult, CreatorIntelAnalysis } from '@/lib/creator-intel/types';
 import { PostMetrics } from './post-metrics';
 import { CreatorOverview } from './creator-overview';
 import { CreatorCard } from './creator-card';
@@ -33,6 +33,10 @@ export function AnalysisReport({ analysis, onAnalyzeCreator }: AnalysisReportPro
 
   if (results.kind === 'post') {
     return <PostReport analysis={analysis} results={results} onAnalyzeCreator={onAnalyzeCreator} />;
+  }
+
+  if (results.kind === 'creator') {
+    return <CreatorReport analysis={analysis} results={results} onAnalyzeCreator={onAnalyzeCreator} />;
   }
 
   return <TopicReport analysis={analysis} results={results} onAnalyzeCreator={onAnalyzeCreator} />;
@@ -102,6 +106,63 @@ function PostReport({
         <h2 className="mb-3 text-lg font-semibold text-gray-900">Creator Overview</h2>
         <CreatorOverview creator={creator} />
       </div>
+
+      {/* Find Similar */}
+      <SimilarResults analysisId={analysis.id} onAnalyzeCreator={onAnalyzeCreator} />
+    </div>
+  );
+}
+
+function CreatorReport({
+  analysis,
+  results,
+  onAnalyzeCreator,
+}: {
+  analysis: CreatorIntelAnalysis;
+  results: CreatorAnalysisResult;
+  onAnalyzeCreator: (username: string) => void;
+}) {
+  const { creator, top_posts } = results;
+
+  return (
+    <div className="space-y-6">
+      {/* Creator Overview */}
+      <div>
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">Creator Profile</h2>
+        <CreatorOverview creator={creator} />
+      </div>
+
+      {/* Top Posts */}
+      {top_posts.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-gray-900">Top Posts ({top_posts.length})</h2>
+          <div className="space-y-2">
+            {top_posts.map((post) => (
+              <a
+                key={post.aweme_id}
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-[#8B3F4F]/50 hover:shadow-sm"
+              >
+                <p className="mb-2 text-sm text-gray-700 line-clamp-2">{post.description}</p>
+                <div className="flex gap-4 text-xs text-gray-500">
+                  <span>{formatNumber(post.stats.views)} views</span>
+                  <span>{formatNumber(post.stats.likes)} likes</span>
+                  <span>{formatNumber(post.stats.comments)} comments</span>
+                  <span>{formatNumber(post.stats.shares)} shares</span>
+                  <span>{post.stats.engagement_rate}% eng</span>
+                </div>
+                {post.hashtags.length > 0 && (
+                  <div className="mt-2">
+                    <ThemeTags themes={post.hashtags} max={5} />
+                  </div>
+                )}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Find Similar */}
       <SimilarResults analysisId={analysis.id} onAnalyzeCreator={onAnalyzeCreator} />

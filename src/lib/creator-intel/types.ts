@@ -10,7 +10,7 @@ export interface CreatorIntelAnalysis {
   type: AnalysisType;
   input: string;
   status: AnalysisStatus;
-  results: PostAnalysisResult | TopicAnalysisResult | null;
+  results: PostAnalysisResult | CreatorAnalysisResult | TopicAnalysisResult | null;
   created_at: string;
 }
 
@@ -18,6 +18,13 @@ export interface PostAnalysisResult {
   kind: 'post';
   post: TikTokPost;
   creator: CreatorProfile;
+  themes: string[];
+}
+
+export interface CreatorAnalysisResult {
+  kind: 'creator';
+  creator: CreatorProfile;
+  top_posts: TikTokPost[];
   themes: string[];
 }
 

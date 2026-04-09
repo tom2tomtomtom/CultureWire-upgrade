@@ -4,6 +4,7 @@ import type {
   CreatorProfile,
   CreatorSummary,
   PostAnalysisResult,
+  CreatorAnalysisResult,
   TopicAnalysisResult,
   ThemeBreakdown,
   InfluencerTier,
@@ -254,6 +255,85 @@ export async function analyzePost(
   };
 }
 
+export async function analyzeCreator(
+  username: string,
+  region: string
+): Promise<CreatorAnalysisResult> {
+  const hasApify = !!process.env.APIFY_API_KEY;
+  let allPosts: TikTokPost[] = [];
+
+  // Step 1: Use Apify to search for the creator's content
+  if (hasApify) {
+    try {
+      const { runId } = await startActorRun('clockworks/tiktok-scraper', {
+        searchQueries: [`@${username}`],
+        resultsPerPage: 100,
+        searchSection: '/video',
+        proxyCountryCode: region === 'US' ? 'US' : 'None',
+      });
+
+      const run = await pollRunToCompletion(runId, 120_000);
+      if (run.defaultDatasetId) {
+        const items = await getDatasetItems(run.defaultDatasetId, 200);
+        for (const item of items) {
+          const post = apifyToTikTokPost(item);
+          if (post) allPosts.push(post);
+        }
+      }
+    } catch (err) {
+      console.error('Apify creator search failed, falling back to ScrapeCreators:', err);
+    }
+  }
+
+  // Step 2: Fallback/supplement with ScrapeCreators
+  if (allPosts.filter((p) => p.username === username).length < 5) {
+    const cleanName = username.replace(/[._]/g, '');
+    const seedHashtags = [username, cleanName, 'fyp', 'viral'].filter(
+      (v, i, a) => a.indexOf(v) === i
+    ).slice(0, 4);
+    const responses = await searchMultipleHashtags(seedHashtags, region);
+    for (const res of responses) {
+      allPosts = allPosts.concat(res.aweme_list.map(toTikTokPost));
+    }
+  }
+
+  // Step 3: Expand with creator's own hashtags
+  const creatorPosts = allPosts.filter((p) => p.username === username);
+  if (creatorPosts.length > 0) {
+    const creatorHashtags = creatorPosts
+      .flatMap((p) => p.hashtags)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 5);
+    if (creatorHashtags.length > 0) {
+      const moreResults = await searchMultipleHashtags(creatorHashtags, region);
+      for (const res of moreResults) {
+        allPosts = allPosts.concat(res.aweme_list.map(toTikTokPost));
+      }
+    }
+  }
+
+  // Deduplicate
+  const seen = new Set<string>();
+  allPosts = allPosts.filter((p) => {
+    if (seen.has(p.aweme_id)) return false;
+    seen.add(p.aweme_id);
+    return true;
+  });
+
+  const creator = buildCreatorProfile(allPosts, username);
+  const topPosts = allPosts
+    .filter((p) => p.username === username)
+    .sort((a, b) => b.stats.views - a.stats.views)
+    .slice(0, 10);
+
+  return {
+    kind: 'creator',
+    creator,
+    top_posts: topPosts,
+    themes: creator.content_themes,
+  };
+}
+
 export async function analyzeTopic(
   topic: string,
   region: string
@@ -346,7 +426,7 @@ export async function analyzeTopic(
 }
 
 export async function findSimilar(
-  sourceAnalysis: PostAnalysisResult | TopicAnalysisResult,
+  sourceAnalysis: PostAnalysisResult | CreatorAnalysisResult | TopicAnalysisResult,
   depth: 'quick' | 'deep',
   region: string
 ): Promise<CreatorSummary[]> {
@@ -354,6 +434,14 @@ export async function findSimilar(
 
   if (sourceAnalysis.kind === 'post') {
     hashtags = sourceAnalysis.post.hashtags.slice(0, depth === 'quick' ? 5 : 10);
+    if (depth === 'deep') {
+      for (const theme of sourceAnalysis.themes) {
+        if (!hashtags.includes(theme)) hashtags.push(theme);
+      }
+      hashtags = hashtags.slice(0, 15);
+    }
+  } else if (sourceAnalysis.kind === 'creator') {
+    hashtags = sourceAnalysis.creator.top_hashtags.slice(0, depth === 'quick' ? 5 : 10);
     if (depth === 'deep') {
       for (const theme of sourceAnalysis.themes) {
         if (!hashtags.includes(theme)) hashtags.push(theme);

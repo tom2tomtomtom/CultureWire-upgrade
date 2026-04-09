@@ -2,7 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { createServerClient, createAdminClient } from '@/lib/supabase/server';
 import { AnalyzeRequestSchema, parseTikTokUrl } from '@/lib/creator-intel/validators';
-import { analyzePost, analyzeTopic } from '@/lib/creator-intel/analyzer';
+import { analyzePost, analyzeCreator, analyzeTopic } from '@/lib/creator-intel/analyzer';
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const analysisType = type === 'url' ? 'post' : 'topic';
+  const analysisType = type === 'url' ? 'post' : type === 'creator' ? 'creator' : 'topic';
 
   const supabase = await createServerClient();
   const { data: analysis, error } = await supabase
@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
     try {
       const results = analysisType === 'post'
         ? await analyzePost(input, region)
+        : analysisType === 'creator'
+        ? await analyzeCreator(input, region)
         : await analyzeTopic(input, region);
 
       await admin

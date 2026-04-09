@@ -52,7 +52,7 @@ export default function CreatorIntelReportPage() {
   }, [id]);
 
   function handleAnalyzeCreator(username: string) {
-    router.push(`/creator-intel?topic=${encodeURIComponent(username)}`);
+    router.push(`/creator-intel?creator=${encodeURIComponent(username)}`);
   }
 
   if (loading) {
@@ -84,7 +84,7 @@ export default function CreatorIntelReportPage() {
         </Link>
         <div>
           <h1 className="text-xl font-bold text-gray-900">
-            {analysis.type === 'post' ? 'Post Analysis' : 'Topic Search'}
+            {analysis.type === 'post' ? 'Post Analysis' : analysis.type === 'creator' ? 'Creator Profile' : 'Topic Search'}
           </h1>
           <p className="text-sm text-gray-500">{analysis.input}</p>
         </div>

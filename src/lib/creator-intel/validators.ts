@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const AnalyzeRequestSchema = z.object({
-  type: z.enum(['url', 'topic']),
+  type: z.enum(['url', 'topic', 'creator']),
   input: z.string().min(1).max(500),
   region: z.string().length(2).default('AU'),
 });
