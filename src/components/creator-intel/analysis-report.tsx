@@ -75,6 +75,22 @@ function PostReport({
         </div>
       </div>
 
+      {/* TikTok Embed */}
+      {post.url && post.url.includes('tiktok.com') && (
+        <div className="rounded-xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-3 text-lg font-semibold text-gray-900">Video</h2>
+          <div className="flex justify-center">
+            <iframe
+              src={`https://www.tiktok.com/embed/v2/${post.aweme_id}`}
+              width="325"
+              height="578"
+              allow="encrypted-media"
+              className="rounded-lg border-0"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Post Metrics */}
       <div>
         <h2 className="mb-3 text-lg font-semibold text-gray-900">Post Metrics</h2>

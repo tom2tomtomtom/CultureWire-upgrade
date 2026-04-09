@@ -27,11 +27,14 @@ export default function CreatorIntelPage() {
       .finally(() => setHistoryLoading(false));
   }, []);
 
-  // Handle ?analyze= query param for creator drill-down
+  // Handle ?analyze= (URL) or ?topic= (creator search) query params
   useEffect(() => {
     const analyzeUrl = searchParams.get('analyze');
+    const topicParam = searchParams.get('topic');
     if (analyzeUrl && !loading) {
       handleAnalyze('url', analyzeUrl);
+    } else if (topicParam && !loading) {
+      handleAnalyze('topic', topicParam);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

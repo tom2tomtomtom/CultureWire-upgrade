@@ -52,8 +52,7 @@ export default function CreatorIntelReportPage() {
   }, [id]);
 
   function handleAnalyzeCreator(username: string) {
-    const url = `https://www.tiktok.com/@${username}`;
-    router.push(`/creator-intel?analyze=${encodeURIComponent(url)}`);
+    router.push(`/creator-intel?topic=${encodeURIComponent(username)}`);
   }
 
   if (loading) {
