@@ -11,6 +11,7 @@ import type {
 import { searchHashtag, searchMultipleHashtags } from './scraper';
 import { extractHashtags, generateHashtags } from './hashtags';
 import { parseTikTokUrl } from './validators';
+import { startActorRun, pollRunToCompletion, getDatasetItems } from '@/lib/apify';
 
 function toTikTokPost(raw: ScrapeCreatorsPost): TikTokPost {
   const totalEngagement = raw.statistics.digg_count + raw.statistics.comment_count + raw.statistics.share_count;
@@ -100,6 +101,41 @@ function buildCreatorProfile(posts: TikTokPost[], username: string): CreatorProf
   };
 }
 
+// Convert Apify TikTok scraper result to our TikTokPost type
+function apifyToTikTokPost(raw: Record<string, unknown>): TikTokPost | null {
+  const authorMeta = raw.authorMeta as Record<string, unknown> | undefined;
+  const username = (authorMeta?.name as string) || (raw.author as string) || '';
+  if (!username) return null;
+
+  const views = (raw.playCount as number) || 0;
+  const likes = (raw.diggCount as number) || 0;
+  const comments = (raw.commentCount as number) || 0;
+  const shares = (raw.shareCount as number) || 0;
+  const totalEng = likes + comments + shares;
+  const engRate = views > 0 ? (totalEng / views) * 100 : 0;
+
+  const desc = (raw.text as string) || '';
+  const hashtags = ((raw.hashtags as { name: string }[]) || []).map((h) => h.name?.toLowerCase()).filter(Boolean);
+  const videoUrl = (raw.webVideoUrl as string) || '';
+  const awemeId = (raw.id as string) || videoUrl.split('/').pop() || '';
+
+  return {
+    aweme_id: awemeId,
+    username,
+    description: desc,
+    region: 'unknown',
+    url: videoUrl || `https://www.tiktok.com/@${username}/video/${awemeId}`,
+    stats: {
+      views,
+      likes,
+      comments,
+      shares,
+      engagement_rate: Math.round(engRate * 100) / 100,
+    },
+    hashtags: hashtags.length > 0 ? hashtags : extractHashtags(desc),
+  };
+}
+
 export async function analyzePost(
   input: string,
   region: string
@@ -109,30 +145,53 @@ export async function analyzePost(
 
   const { username, awemeId } = parsed;
 
-  // Step 1: Cast a wide net with high-traffic hashtags to find the post or creator
-  // Searching username as hashtag rarely works, so use popular discovery hashtags
-  const discoveryHashtags = [
-    'fyp', 'viral', 'trending', 'foryou', 'foryoupage',
-    'edit', 'tutorial', 'creative', 'film', 'video',
-  ];
-  // Also try the username stripped of dots/underscores
-  const usernameClean = username.replace(/[._]/g, '');
-  const firstBatch = [username, usernameClean, ...discoveryHashtags.slice(0, 8)].filter(
-    (v, i, a) => a.indexOf(v) === i
-  ).slice(0, 10);
-
-  const initialResponses = await searchMultipleHashtags(firstBatch, region);
-
+  // Step 1: Use Apify to search for the creator's content directly
+  const hasApify = !!process.env.APIFY_API_KEY;
   let allPosts: TikTokPost[] = [];
-  for (const res of initialResponses) {
-    allPosts = allPosts.concat(res.aweme_list.map(toTikTokPost));
+  let targetPost: TikTokPost | undefined;
+
+  if (hasApify) {
+    try {
+      // Search for the creator by username via Apify TikTok scraper
+      const { runId } = await startActorRun('clockworks/tiktok-scraper', {
+        searchQueries: [`@${username}`],
+        resultsPerPage: 50,
+        searchSection: '/video',
+        proxyCountryCode: region === 'US' ? 'US' : 'None',
+      });
+
+      const run = await pollRunToCompletion(runId, 120_000);
+      if (run.defaultDatasetId) {
+        const items = await getDatasetItems(run.defaultDatasetId, 100);
+        for (const item of items) {
+          const post = apifyToTikTokPost(item);
+          if (post) allPosts.push(post);
+        }
+      }
+
+      targetPost = allPosts.find((p) => p.aweme_id === awemeId);
+    } catch (err) {
+      console.error('Apify TikTok search failed, falling back to ScrapeCreators:', err);
+    }
   }
 
-  // Try to find the target post or any post by this creator
-  let targetPost = allPosts.find((p) => p.aweme_id === awemeId);
+  // Step 2: Fallback to ScrapeCreators if Apify didn't find enough
+  if (allPosts.length === 0) {
+    const usernameClean = username.replace(/[._]/g, '');
+    const seedHashtags = [username, usernameClean, 'fyp', 'viral'].filter(
+      (v, i, a) => a.indexOf(v) === i
+    ).slice(0, 4);
+    const responses = await searchMultipleHashtags(seedHashtags, region);
+    for (const res of responses) {
+      allPosts = allPosts.concat(res.aweme_list.map(toTikTokPost));
+    }
+    targetPost = allPosts.find((p) => p.aweme_id === awemeId);
+  }
+
+  // Filter to creator's posts
   let creatorPosts = allPosts.filter((p) => p.username === username);
 
-  // Step 2: If we found creator posts, use their hashtags to find more
+  // Step 3: If we found creator posts, use their hashtags to expand via ScrapeCreators
   if (creatorPosts.length > 0) {
     const creatorHashtags = creatorPosts
       .flatMap((p) => p.hashtags)
@@ -150,13 +209,11 @@ export async function analyzePost(
     }
   }
 
-  // Step 3: Use the target post if found, otherwise best creator post, otherwise synthetic
+  // Step 4: Use the target post if found, otherwise best creator post, otherwise synthetic
   if (!targetPost) {
     if (creatorPosts.length > 0) {
       targetPost = creatorPosts.sort((a, b) => b.stats.views - a.stats.views)[0];
     } else {
-      // Create a minimal post entry. Stats will be zero but creator profile
-      // may still be populated from the broader search results.
       targetPost = {
         aweme_id: awemeId,
         username,
