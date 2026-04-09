@@ -202,7 +202,7 @@ export async function analyzePost(
         searchQueries: [`@${username}`],
         resultsPerPage: 50,
         searchSection: '/video',
-        proxyCountryCode: region === 'US' ? 'US' : 'None',
+        proxyCountryCode: region === 'AU' ? 'AU' : region === 'US' ? 'US' : 'None',
       });
 
       const run = await pollRunToCompletion(runId, 120_000);
@@ -320,7 +320,7 @@ export async function analyzeCreator(
         searchQueries: [`@${username}`],
         resultsPerPage: 100,
         searchSection: '/video',
-        proxyCountryCode: region === 'US' ? 'US' : 'None',
+        proxyCountryCode: region === 'AU' ? 'AU' : region === 'US' ? 'US' : 'None',
       });
 
       const run = await pollRunToCompletion(runId, 120_000);
@@ -440,11 +440,22 @@ export async function analyzeTopic(
         total_views: totalViews,
       };
     })
-    .sort((a, b) => b.total_views - a.total_views)
+    .sort((a, b) => {
+      // Prioritize target region creators
+      const aLocal = a.region === region ? 1 : 0;
+      const bLocal = b.region === region ? 1 : 0;
+      if (aLocal !== bLocal) return bLocal - aLocal;
+      return b.total_views - a.total_views;
+    })
     .slice(0, 20);
 
   const trendingPosts = [...allPosts]
-    .sort((a, b) => b.stats.views - a.stats.views)
+    .sort((a, b) => {
+      const aLocal = a.region === region ? 1 : 0;
+      const bLocal = b.region === region ? 1 : 0;
+      if (aLocal !== bLocal) return bLocal - aLocal;
+      return b.stats.views - a.stats.views;
+    })
     .slice(0, 20);
 
   const themeCounts: Record<string, { count: number; totalEngRate: number }> = {};
@@ -558,6 +569,11 @@ export async function findSimilar(
       };
     })
     .filter((c) => tierOrder.indexOf(c.tier) >= minTierIndex)
-    .sort((a, b) => b.total_views - a.total_views)
+    .sort((a, b) => {
+      const aLocal = a.region === region ? 1 : 0;
+      const bLocal = b.region === region ? 1 : 0;
+      if (aLocal !== bLocal) return bLocal - aLocal;
+      return b.total_views - a.total_views;
+    })
     .slice(0, 20);
 }
