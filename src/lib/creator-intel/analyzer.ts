@@ -109,13 +109,19 @@ export async function analyzePost(
 
   const { username, awemeId } = parsed;
 
-  // Step 1: Search multiple strategies in parallel to find content
-  // Username as hashtag rarely works, so also try common content hashtags
+  // Step 1: Cast a wide net with high-traffic hashtags to find the post or creator
+  // Searching username as hashtag rarely works, so use popular discovery hashtags
+  const discoveryHashtags = [
+    'fyp', 'viral', 'trending', 'foryou', 'foryoupage',
+    'edit', 'tutorial', 'creative', 'film', 'video',
+  ];
+  // Also try the username stripped of dots/underscores
   const usernameClean = username.replace(/[._]/g, '');
-  const seedHashtags = [username, usernameClean, 'fyp', 'viral', 'trending'].filter(
+  const firstBatch = [username, usernameClean, ...discoveryHashtags.slice(0, 8)].filter(
     (v, i, a) => a.indexOf(v) === i
-  );
-  const initialResponses = await searchMultipleHashtags(seedHashtags.slice(0, 4), region);
+  ).slice(0, 10);
+
+  const initialResponses = await searchMultipleHashtags(firstBatch, region);
 
   let allPosts: TikTokPost[] = [];
   for (const res of initialResponses) {
@@ -126,36 +132,31 @@ export async function analyzePost(
   let targetPost = allPosts.find((p) => p.aweme_id === awemeId);
   let creatorPosts = allPosts.filter((p) => p.username === username);
 
-  // Step 2: If we found creator posts but not the target, use hashtags from their posts
-  if (!targetPost && creatorPosts.length > 0) {
-    const creatorHashtags = creatorPosts.flatMap((p) => p.hashtags).slice(0, 5);
+  // Step 2: If we found creator posts, use their hashtags to find more
+  if (creatorPosts.length > 0) {
+    const creatorHashtags = creatorPosts
+      .flatMap((p) => p.hashtags)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 5);
     if (creatorHashtags.length > 0) {
       const moreResults = await searchMultipleHashtags(creatorHashtags, region);
       for (const res of moreResults) {
         allPosts = allPosts.concat(res.aweme_list.map(toTikTokPost));
       }
-      targetPost = allPosts.find((p) => p.aweme_id === awemeId);
+      if (!targetPost) {
+        targetPost = allPosts.find((p) => p.aweme_id === awemeId);
+      }
+      creatorPosts = allPosts.filter((p) => p.username === username);
     }
   }
 
-  // Step 3: If we still have nothing, try broader niche hashtags
-  if (!targetPost && creatorPosts.length === 0) {
-    const broadHashtags = generateHashtags(usernameClean);
-    const broadResults = await searchMultipleHashtags(broadHashtags.slice(0, 5), region);
-    for (const res of broadResults) {
-      allPosts = allPosts.concat(res.aweme_list.map(toTikTokPost));
-    }
-    targetPost = allPosts.find((p) => p.aweme_id === awemeId);
-    creatorPosts = allPosts.filter((p) => p.username === username);
-  }
-
-  // Step 4: Build a synthetic target post if we couldn't find the exact one
+  // Step 3: Use the target post if found, otherwise best creator post, otherwise synthetic
   if (!targetPost) {
     if (creatorPosts.length > 0) {
-      // Use their best post as representative
       targetPost = creatorPosts.sort((a, b) => b.stats.views - a.stats.views)[0];
     } else {
-      // Create a minimal post entry from the URL info and analyze the broader landscape
+      // Create a minimal post entry. Stats will be zero but creator profile
+      // may still be populated from the broader search results.
       targetPost = {
         aweme_id: awemeId,
         username,
