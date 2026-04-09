@@ -274,3 +274,6 @@ export interface CulturalTension {
   evidence: string[];
   brand_implication: string;
 }
+
+// Creator Intel
+export type { CreatorIntelAnalysis } from '@/lib/creator-intel/types';
