@@ -18,6 +18,7 @@ export interface PostAnalysisResult {
   kind: 'post';
   post: TikTokPost;
   creator: CreatorProfile;
+  creator_top_posts: TikTokPost[];
   themes: string[];
 }
 
@@ -59,6 +60,9 @@ export interface PostStats {
 
 export interface CreatorProfile {
   username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  follower_count: number | null;
   region: string;
   tier: InfluencerTier;
   follower_estimate: string | null;

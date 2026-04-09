@@ -45,6 +45,20 @@ export function classifyTier(avgViews: number): InfluencerTier {
   return 'nano';
 }
 
+function classifyTierByFollowers(followers: number): InfluencerTier {
+  if (followers >= 1_000_000) return 'mega';
+  if (followers >= 500_000) return 'macro';
+  if (followers >= 100_000) return 'mid-tier';
+  if (followers >= 10_000) return 'micro';
+  return 'nano';
+}
+
+function formatFollowers(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toString();
+}
+
 function estimatePostingFrequency(postCount: number): string {
   if (postCount >= 8) return 'Very active (daily+)';
   if (postCount >= 4) return 'Active (several per week)';
@@ -52,14 +66,29 @@ function estimatePostingFrequency(postCount: number): string {
   return 'Occasional';
 }
 
+// Store extracted author metadata from Apify results
+interface AuthorMeta {
+  avatar?: string;
+  displayName?: string;
+  fans?: number;
+}
+
+// Module-level cache for author metadata extracted from Apify results
+const authorMetaCache: Record<string, AuthorMeta> = {};
+
 function buildCreatorProfile(posts: TikTokPost[], username: string): CreatorProfile {
   const userPosts = posts.filter((p) => p.username === username);
+  const meta = authorMetaCache[username];
+
   if (userPosts.length === 0) {
     return {
       username,
+      display_name: meta?.displayName || null,
+      avatar_url: meta?.avatar || null,
+      follower_count: meta?.fans || null,
       region: 'unknown',
-      tier: 'nano',
-      follower_estimate: null,
+      tier: meta?.fans ? classifyTierByFollowers(meta.fans) : 'nano',
+      follower_estimate: meta?.fans ? formatFollowers(meta.fans) : null,
       avg_views: 0,
       avg_likes: 0,
       avg_shares: 0,
@@ -87,11 +116,17 @@ function buildCreatorProfile(posts: TikTokPost[], username: string): CreatorProf
 
   const themes = topHashtags.slice(0, 5);
 
+  // Use follower count for tier if available, otherwise fall back to avg views
+  const tier = meta?.fans ? classifyTierByFollowers(meta.fans) : classifyTier(avgViews);
+
   return {
     username,
+    display_name: meta?.displayName || null,
+    avatar_url: meta?.avatar || null,
+    follower_count: meta?.fans || null,
     region: userPosts[0].region,
-    tier: classifyTier(avgViews),
-    follower_estimate: null,
+    tier,
+    follower_estimate: meta?.fans ? formatFollowers(meta.fans) : null,
     avg_views: avgViews,
     avg_likes: avgLikes,
     avg_shares: avgShares,
@@ -107,6 +142,15 @@ function apifyToTikTokPost(raw: Record<string, unknown>): TikTokPost | null {
   const authorMeta = raw.authorMeta as Record<string, unknown> | undefined;
   const username = (authorMeta?.name as string) || (raw.author as string) || '';
   if (!username) return null;
+
+  // Cache author metadata for profile building
+  if (authorMeta && !authorMetaCache[username]) {
+    authorMetaCache[username] = {
+      avatar: (authorMeta.avatar as string) || undefined,
+      displayName: (authorMeta.nickName as string) || (authorMeta.name as string) || undefined,
+      fans: (authorMeta.fans as number) || undefined,
+    };
+  }
 
   const views = (raw.playCount as number) || 0;
   const likes = (raw.diggCount as number) || 0;
@@ -247,10 +291,17 @@ export async function analyzePost(
   const creator = buildCreatorProfile(allPosts, username);
   const themes = creator.content_themes;
 
+  // Get creator's top posts for the report
+  const creatorTopPosts = allPosts
+    .filter((p) => p.username === username && p.aweme_id !== targetPost.aweme_id)
+    .sort((a, b) => b.stats.views - a.stats.views)
+    .slice(0, 10);
+
   return {
     kind: 'post',
     post: targetPost,
     creator,
+    creator_top_posts: creatorTopPosts,
     themes,
   };
 }

@@ -34,12 +34,20 @@ export function CreatorOverview({ creator }: CreatorOverviewProps) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
       <div className="mb-4 flex items-center gap-4">
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white"
-          style={{ backgroundColor: tierColor }}
-        >
-          {creator.username[0].toUpperCase()}
-        </div>
+        {creator.avatar_url ? (
+          <img
+            src={creator.avatar_url}
+            alt={creator.username}
+            className="h-12 w-12 rounded-full object-cover"
+          />
+        ) : (
+          <div
+            className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white"
+            style={{ backgroundColor: tierColor }}
+          >
+            {creator.username[0].toUpperCase()}
+          </div>
+        )}
         <div>
           <div className="flex items-center gap-2">
             <a
@@ -48,7 +56,7 @@ export function CreatorOverview({ creator }: CreatorOverviewProps) {
               rel="noopener noreferrer"
               className="text-lg font-semibold text-gray-900 hover:text-[#8B3F4F]"
             >
-              @{creator.username}
+              {creator.display_name || `@${creator.username}`}
             </a>
             <span
               className="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
@@ -61,12 +69,18 @@ export function CreatorOverview({ creator }: CreatorOverviewProps) {
               {TIER_LABELS[creator.tier]}
             </span>
           </div>
-          {creator.region !== 'unknown' && (
-            <div className="flex items-center gap-1 text-sm text-gray-500">
-              <MapPin className="h-3 w-3" />
-              {creator.region}
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            {creator.display_name && <span>@{creator.username}</span>}
+            {creator.follower_count && (
+              <span>{formatNumber(creator.follower_count)} followers</span>
+            )}
+            {creator.region !== 'unknown' && (
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {creator.region}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

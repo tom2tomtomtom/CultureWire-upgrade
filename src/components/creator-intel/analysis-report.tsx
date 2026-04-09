@@ -107,6 +107,32 @@ function PostReport({
         <CreatorOverview creator={creator} />
       </div>
 
+      {/* Creator's Other Top Posts */}
+      {results.creator_top_posts.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-gray-900">More from @{creator.username}</h2>
+          <div className="space-y-2">
+            {results.creator_top_posts.map((p) => (
+              <a
+                key={p.aweme_id}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-[#8B3F4F]/50 hover:shadow-sm"
+              >
+                <p className="mb-2 text-sm text-gray-700 line-clamp-2">{p.description}</p>
+                <div className="flex gap-4 text-xs text-gray-500">
+                  <span>{formatNumber(p.stats.views)} views</span>
+                  <span>{formatNumber(p.stats.likes)} likes</span>
+                  <span>{formatNumber(p.stats.shares)} shares</span>
+                  <span>{p.stats.engagement_rate}% eng</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Find Similar */}
       <SimilarResults analysisId={analysis.id} onAnalyzeCreator={onAnalyzeCreator} />
     </div>
