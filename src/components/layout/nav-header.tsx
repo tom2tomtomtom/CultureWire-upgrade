@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import { Search, Grid3X3, Users, MessageSquare } from 'lucide-react';
+import { Search, Grid3X3, Users, MessageSquare, Sparkles } from 'lucide-react';
 import { UserMenu } from '@/components/auth/user-menu';
 import { ApifyCreditBadge } from '@/components/layout/apify-credit-badge';
 import { cn } from '@/lib/utils';
@@ -85,6 +85,18 @@ export function NavHeader({ email }: { email: string | null }) {
             >
               <Users className="h-3.5 w-3.5" />
               Influencers
+            </Link>
+            <Link
+              href="/creator-intel"
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
+                pathname.startsWith('/creator-intel')
+                  ? 'border-[#8B3F4F] bg-[#8B3F4F]/10 text-[#8B3F4F]'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-200'
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Creator Intel
             </Link>
           </nav>
         </div>
